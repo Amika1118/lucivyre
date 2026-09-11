@@ -1,5 +1,10 @@
 import os
 import mimetypes
+import mutagen
+
+from mutagen import File
+
+old_list = []
 
 def ask_folder():
     while True:
@@ -9,7 +14,7 @@ def ask_folder():
         else:
             print("The folder does not exist\nPlease enter a valid folder path")
 
-def check_songs(song_list):
+def check_songs(new_list):
     while True:
         path = ask_folder()  # existing folder picker
 
@@ -22,16 +27,17 @@ def check_songs(song_list):
 
             mime, _ = mimetypes.guess_type(full)
             if mime and mime.startswith("audio/"):
-                song_list.append(full)
+                old_list.append(full)
+                new_list.append(os.path.splitext(os.path.basename(full))[0])
             else:
                 print(f"Skipped (not audio): {name}")
 
-        if not song_list:
+        if not old_list:
             print("No audio files found in that folder.")
 
         # if there is 0 audio files ask for the folder path again
-        if len(song_list) != 0:
-            print(f"Found {len(song_list)} song(s).")
-            break
+        if len(old_list) != 0:
+            print(f"Found {len(old_list)} song(s).")
+            return old_list
         else:
             print("No songs found in that folder.\n Please enter a valid folder path")
