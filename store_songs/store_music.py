@@ -1,6 +1,5 @@
 import os
 import mimetypes
-import mutagen
 
 from mutagen import File
 from mutagen.id3 import ID3
@@ -55,7 +54,7 @@ def get_audio_type(path):
 # new_list is retuned with name, artist and the length of the song
 # old_list has the path of every song
 def check_songs(new_list):
-    global skipped_songs, artist, length, arti, file_type
+    global skipped_songs, artist, length, arti, file_type, file_path
     while True:
         path = ask_folder()  # existing folder picker
 
@@ -77,6 +76,7 @@ def check_songs(new_list):
                     length = audio.info.length
                     artist = get_first_artist(full)
                     file_type = get_audio_type(full)
+                    file_path = full
 
                 except HeaderNotFoundError:
                     print(f"Skipping {full}")
@@ -85,7 +85,7 @@ def check_songs(new_list):
                 if artist == "Unknown Artist":
                     arti = arti + 1
 
-                new_list[os.path.splitext(os.path.basename(full))[0]] =  [length], [artist], [file_type]
+                new_list[os.path.splitext(os.path.basename(full))[0]] =  [length] + [artist] + [file_type] + [file_path]
             else:
                 print(f"Skipped (not audio): {name}")
 
