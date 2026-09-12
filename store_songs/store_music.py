@@ -3,8 +3,12 @@ import mimetypes
 import mutagen
 
 from mutagen import File
+from mutagen.id3 import ID3
+from mutagen.mp3 import HeaderNotFoundError
 
 old_list = []
+skipped_songs = 0
+arti = 0
 
 def ask_folder():
     while True:
@@ -14,7 +18,36 @@ def ask_folder():
         else:
             print("The folder does not exist\nPlease enter a valid folder path")
 
+def get_first_artist(path):
+    # Try raw ID3 first (MP3)
+    try:
+        tags = ID3(path)
+        frame = tags.get("TPE1")
+        if frame and frame.text:
+            raw = str(frame.text[0])
+            first = raw.split("\x00")[0].split("/")[0].strip()
+            if first:
+                return first
+    except Exception:
+        pass
+
+    # Fallback: easy interface for other formats .m4a and other formats.
+    try:
+        audio = File(path, easy=True)
+        if audio and audio.tags:
+            val = audio.get("artist")
+            if val:
+                raw = str(val[0])
+                return raw.split("\x00")[0].split("/")[0].strip()
+    except Exception:
+        pass
+
+    return "Unknown"
+
+# new_list is retuned with name, artist and the length of the song
+# old_list has the path of every song
 def check_songs(new_list):
+    global skipped_songs, artist, length, arti
     while True:
         path = ask_folder()  # existing folder picker
 
@@ -24,11 +57,26 @@ def check_songs(new_list):
             # must be a file, not a subfolder
             if not os.path.isfile(full):
                 continue
-
+            # checking the type to only get the audio
             mime, _ = mimetypes.guess_type(full)
             if mime and mime.startswith("audio/"):
                 old_list.append(full)
-                new_list.append(os.path.splitext(os.path.basename(full))[0])
+                try:
+                    audio = File(full)
+                    if audio is None:
+                        print(f"Unsupported or unreadable file: {full}")
+                        continue
+                    length = audio.info.length
+                    artist = get_first_artist(full)
+
+                except HeaderNotFoundError:
+                    print(f"Skipping {full}")
+                    skipped_songs = skipped_songs + 1
+
+                if artist == "Unknown Artist":
+                    arti = arti + 1
+
+                new_list.append([os.path.splitext(os.path.basename(full))[0], length, artist])
             else:
                 print(f"Skipped (not audio): {name}")
 
