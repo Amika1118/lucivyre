@@ -5,6 +5,7 @@ import mutagen
 from mutagen import File
 from mutagen.id3 import ID3
 from mutagen.mp3 import HeaderNotFoundError
+from pathlib import Path
 
 old_list = []
 skipped_songs = 0
@@ -44,10 +45,17 @@ def get_first_artist(path):
 
     return "Unknown"
 
+def get_audio_type(path):
+    try:
+        file_type = Path(path).suffix.lower()
+        return file_type
+    except Exception:
+        return "Unknown"
+
 # new_list is retuned with name, artist and the length of the song
 # old_list has the path of every song
 def check_songs(new_list):
-    global skipped_songs, artist, length, arti
+    global skipped_songs, artist, length, arti, file_type
     while True:
         path = ask_folder()  # existing folder picker
 
@@ -68,6 +76,7 @@ def check_songs(new_list):
                         continue
                     length = audio.info.length
                     artist = get_first_artist(full)
+                    file_type = get_audio_type(full)
 
                 except HeaderNotFoundError:
                     print(f"Skipping {full}")
@@ -76,7 +85,7 @@ def check_songs(new_list):
                 if artist == "Unknown Artist":
                     arti = arti + 1
 
-                new_list.append([os.path.splitext(os.path.basename(full))[0], length, artist])
+                new_list[os.path.splitext(os.path.basename(full))[0]] =  [length], [artist], [file_type]
             else:
                 print(f"Skipped (not audio): {name}")
 
