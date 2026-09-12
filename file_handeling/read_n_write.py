@@ -3,17 +3,19 @@ import json
 
 
 
-def write_songs(file, dictionary):
-    with open(file, "w", newline="") as csvfile:  # clear file safely
+def write_songs(header,file, dictionary):
+    with open(file, "w", newline="", encoding="utf-8") as csvfile:  # clear file safely
 
         writer = csv.writer(csvfile)
+        if header:
+            writer.writerow(header)
         for title in dictionary:
             writer.writerow([title] + dictionary[title])
 
 
-def read_songs(file,dictionary):
+def read_songs(header, file,dictionary):
     dictionary.clear()
-    with open(file, "r", newline="") as csvfile:
+    with open(file, "r", newline="", encoding="utf-8") as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
             if row:
