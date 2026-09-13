@@ -10,6 +10,8 @@ old_list = []
 skipped_songs = 0
 arti = 0
 
+# asks for a pah from the user if audio files exists it returns
+# if not asks for a pth until user enters a valid path.
 def ask_folder():
     while True:
         user_in = input("Enter the folder path :")

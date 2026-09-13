@@ -1,8 +1,7 @@
 import csv
 import json
 
-
-
+# the csv writer
 def write_songs(header,file, dictionary):
     with open(file, "w", newline="", encoding="utf-8") as csvfile:  # clear file safely
 
@@ -12,18 +11,19 @@ def write_songs(header,file, dictionary):
         for title in dictionary:
             writer.writerow([title] + dictionary[title])
 
-
-def read_songs(header, file,dictionary):
+# the csv reader
+def read_songs(file,dictionary):
     dictionary.clear()
     with open(file, "r", newline="", encoding="utf-8") as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
             if row:
-                if len(row) == 3:
+                if len(row) == 4:
                     title = row[0]
                     artist = row[1]
-                    credits = row[2]
-                    dictionary[title] = [artist] + [credits]
+                    length = row[2]
+                    credits = row[3]
+                    dictionary[title] = [artist] + [length] + [credits]
                 elif len(row) == 8:
                     id = row[0]
                     title = row[1]
