@@ -1,5 +1,4 @@
 import os
-import pygame
 
 import store_songs.store_music as sm
 import file_handeling.handle_csv as hc

@@ -15,7 +15,10 @@ def write_songs(header,file, dictionary):
 def read_songs(file,dictionary):
     dictionary.clear()
     with open(file, "r", newline="", encoding="utf-8") as csvfile:
+
         reader = csv.reader(csvfile)
+        next(reader, None)  # skip the first row (header)
+
         for row in reader:
             if row:
                 if len(row) == 4:
@@ -24,7 +27,7 @@ def read_songs(file,dictionary):
                     length = row[2]
                     credits = row[3]
                     dictionary[title] = [artist] + [length] + [credits]
-                elif len(row) == 8:
+                elif len(row) == 9:
                     id = row[0]
                     title = row[1]
                     artist = row[2]
@@ -33,4 +36,5 @@ def read_songs(file,dictionary):
                     credits = row[5]
                     file_path = row[6]
                     times_played = row[7]
-                    dictionary[id] = [title] + [artist] + [length] + [audio_type] + [credits] + [file_path] + [times_played]
+                    date_added = row[8]
+                    dictionary[id] = [title] + [artist] + [length] + [audio_type] + [credits] + [file_path] + [times_played] + [date_added]

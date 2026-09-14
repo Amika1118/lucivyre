@@ -5,8 +5,6 @@ from pathlib import Path
 import json
 from datetime import datetime
 
-songs = {}
-
 # getting the file path without issues.
 BASE_DIR = Path(__file__).resolve().parent.parent
 credit_csv_path = BASE_DIR / "data" / "credits" / "credits.csv"
@@ -44,15 +42,16 @@ def initialize():
         file_path = data[3]
         time_played = 0
         credits = 10
+        date_added = data[4]
         music_new[song] = [artist] + [length] + [credits]
-        music_full[song_id] = [song] + [artist] + [length] + [credits] + [file_type] + [file_path] + [time_played]
+        music_full[song_id] = [song] + [artist] + [length] + [credits] + [file_type] + [file_path] + [time_played] + [date_added]
 
     # as an initialization step the 10 credit will be added to each song.
     header = ["song", "artist", "length", "credits"]
     rw.write_songs(header,credit_csv_path,music_new)
 
-    # this is where we add all the data of each song will be added to a csv.
-    header = ["Id","Song","Artist","Length","Credits","Audio_type","File_path","Times_played"]
+    # this is where we add all the data of each song to a csv.
+    header = ["Id","Song","Artist","Length","Credits","Audio_type","File_path","Times_played","Date_added"]
     rw.write_songs(header,full_data_path,music_full)
 
     MARKER.parent.mkdir(parents=True, exist_ok=True)

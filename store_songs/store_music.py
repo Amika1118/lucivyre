@@ -1,6 +1,7 @@
 import os
 import mimetypes
 
+from datetime import datetime
 from mutagen import File
 from mutagen.id3 import ID3
 from mutagen.mp3 import HeaderNotFoundError
@@ -53,6 +54,12 @@ def get_audio_type(path):
     except Exception:
         return "Unknown"
 
+def get_added_date(file_path):
+    timestamp = os.path.getmtime(file_path)
+    return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+
+
+
 # new_list is retuned with name, artist and the length of the song
 # old_list has the path of every song
 def check_songs(new_list):
@@ -79,6 +86,7 @@ def check_songs(new_list):
                     artist = get_first_artist(full)
                     file_type = get_audio_type(full)
                     file_path = full
+                    added_date = get_added_date(full)
 
                 except HeaderNotFoundError:
                     print(f"Skipping {full}")
@@ -87,7 +95,7 @@ def check_songs(new_list):
                 if artist == "Unknown Artist":
                     arti = arti + 1
 
-                new_list[os.path.splitext(os.path.basename(full))[0]] =  [length] + [artist] + [file_type] + [file_path]
+                new_list[os.path.splitext(os.path.basename(full))[0]] =  [length] + [artist] + [file_type] + [file_path] + [added_date]
             else:
                 print(f"Skipped (not audio): {name}")
 
