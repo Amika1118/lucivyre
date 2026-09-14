@@ -82,6 +82,8 @@ def check_songs(new_list):
                     if audio is None:
                         print(f"Unsupported or unreadable file: {full}")
                         continue
+
+                    # data being assigned to variables to be used in other functions.
                     length = audio.info.length
                     artist = get_first_artist(full)
                     file_type = get_audio_type(full)

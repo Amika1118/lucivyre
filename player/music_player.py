@@ -8,7 +8,7 @@ music = {}
 
 import pygame
 
-def player():
+def player(user_in):
     rw.read_songs(full_csv, music)
 
     # initializing the pygame module.
@@ -33,5 +33,3 @@ def player():
             print(f"  Skipped: {e}")
 
     print("All songs finished.")
-
-player()
