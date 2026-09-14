@@ -6,8 +6,6 @@ import file_handeling.handle_csv as hc
 full_csv = hc.full_data_path
 music = {}
 
-import pygame
-
 def player(user_in):
     rw.read_songs(full_csv, music)
 
