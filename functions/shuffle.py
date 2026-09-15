@@ -1,6 +1,6 @@
 import file_handeling.handle_csv
 import file_handeling.read_n_write as rw
-import funtions.sort as sr
+import functions.sort as sr
 
 credits_file = file_handeling.handle_csv.credit_csv_path
 songs_file = file_handeling.handle_csv.songs_csv_path
@@ -13,7 +13,7 @@ def shuffle():
     print("Hello World")
 
 
-def deduct_credits(song_id, played_time, total_time):
+def deduct_credits(song_id, played_time):
     """Reduce a song's credits based on how much of it was actually played."""
     # 1. Load data
     rw.read_songs(credits_file, song_credits)
