@@ -6,12 +6,11 @@ import ui_features.ui as ui
 from file_handeling.handle_csv import full_data_path
 
 songs = {}
-song_ids = []
 artists = []
 
 full_data_csv = file_handeling.handle_csv.full_data_path
 
-def search_by_first_letter(user_input):
+def search_by_first_letter(user_input,song_ids):
     """Search for songs by first letter."""
     songs.clear()
     rw.read_songs(full_data_csv, songs)
@@ -19,9 +18,7 @@ def search_by_first_letter(user_input):
         if user_input.capitalize() == data[0][0].capitalize():
             song_ids.append(song_id)
 
-    return song_ids
-
-def search_by_title(user_input):
+def search_by_title(user_input,song_ids):
     """Search for songs by title."""
     songs.clear()
     rw.read_songs(full_data_csv, songs)
@@ -31,7 +28,7 @@ def search_by_title(user_input):
 
     return song_ids
 
-def search_by_artist(user_input,choice):
+def search_by_artist(user_input,choice,song_ids):
     """Search for songs by artist."""
     songs.clear()
     if choice == 1:
@@ -43,8 +40,6 @@ def search_by_artist(user_input,choice):
     for artist,song_id in song.items():
         if user_in.lower() in artist.lower():
             song_ids.append(song_id)
-
-    return song_ids
 
 def search_artist(user_input):
     """Search for artists by the first letter of their name."""
@@ -78,7 +73,7 @@ def search_artist(user_input):
             send_artist = artists[user_choice - 1]
             return send_artist
 
-def search():
+def search(song_ids):
     while True:
         print("Search for songs ....")
         ui.lines(34)
@@ -95,14 +90,14 @@ def search():
                 if song_search.isalpha():
                     print(f"You only entered one letter.\nWe're gonna search for songs starting with {song_search.capitalize()}\n")
                     ui.lines(45)
-                    search_by_first_letter(song_search.capitalize())
+                    search_by_first_letter(song_search.capitalize(),song_ids)
                     break
                 else:
                     print("Please enter a valid English letter.")
             else :
                 print(f"We're gonna search for {song_search.capitalize()}\n")
                 ui.lines(45)
-                search_by_title(song_search.capitalize())
+                search_by_title(song_search.capitalize(),song_ids)
                 break
 
         elif user_choice.lower() in ["2", "02", "artist", "by artist"]:
@@ -112,7 +107,7 @@ def search():
                 if artist_search.isalpha():
                     print(f"You only entered one letter.\nSo We're gonna search for artists starting with {artist_search.capitalize()}\n")
                     ui.lines(45)
-                    search_by_artist(artist_search.capitalize(),1)
+                    search_by_artist(artist_search.capitalize(),1,song_ids)
                     break
                 else:
                     print("Please enter a valid English letter.")

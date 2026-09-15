@@ -13,22 +13,22 @@ songs_csv_path = BASE_DIR / "data"  / "songs.csv"
 artists_csv_path = BASE_DIR / "data" / "artists.csv"
 MARKER = BASE_DIR / "data" / ".initialized.json"
 
-music = {}
-music_new = {}
-music_full = {}
-artists = {}
-music_key_details = {}
+old_dict = {}
+new_dict_credits = {}
+new_dict_artists = {}
+new_dict_songs = {}
+new_dict_full = {}
 
 def initialize():
     # checking the existence of the time stamp before running the programme
     # if it exists this code won't run
-    # if MARKER.exists():
-    #     info = json.loads(MARKER.read_text(encoding="utf-8"))
-    #     print(f"Already initialized at {info['when']}")
-    #     return
+    if MARKER.exists():
+        info = json.loads(MARKER.read_text(encoding="utf-8"))
+        print(f"Already initialized at {info['when']}")
+        return
 
-    sm.check_songs(music)
-    for i, (songs, data) in enumerate(music.items(), start=1):
+    sm.check_songs(old_dict)
+    for i, (songs, data) in enumerate(old_dict.items(), start=1):
 
         if len(str(i)) == 1:
             song_id = f"song_000{i}"
@@ -49,43 +49,40 @@ def initialize():
         date_added = data[4]
         artist_credits = 10
 
-        music_new[song_id] = [length] + [song_credits]
-        music_full[song_id] = [song] + [artist] + [length] + [song_credits] + [file_type] + [file_path] + [times_played] + [date_added]
-        music_key_details[song_id] = [song] + [artist] + [length] + [times_played]
+        # music_new[song_id] = [length] + [song_credits]
+        new_dict_full[song_id] = [song] + [artist] + [length] + [song_credits] + [file_type] + [file_path] + [times_played] + [date_added]
+        # music_key_details[song_id] = [song] + [artist] + [length] + [times_played]
 
-        if artist in artists.keys():
-            continue
-        else:
-            artists[artist] = [artist_credits]
+        # Artist Credits won't be added as well.
+        # if artist in artists.keys():
+        #     continue
+        # else:
+        #     artists[artist] = [artist_credits]
 
-    # as an initialization step the 10 credit will be added to each song.
-    header = ["Id", "length", "song_credits"]
-    rw.write_songs(header,credit_csv_path,music_new)
-
-    header = ["Artist", "artist_credits"]
-    rw.write_songs(header,artists_csv_path,artists)
-
-    # this is made so to be able to update the csv while running unlike the full one.
-    header = ["Id","Song","Artist","Length","Times_played"]
-    rw.write_songs(header,songs_csv_path,music_key_details)
+    """ Previously All the csvs even the updated while initializing now """
+    # # as an initialization step the 10 credit will be added to each song.
+    # header = ["Id", "length", "song_credits"]
+    # rw.write_songs(header,credit_csv_path,music_new)
+    #
+    # header = ["Artist", "artist_credits"]
+    # rw.write_songs(header,artists_csv_path,artists)
+    #
+    # # this is made so to be able to update the csv while running unlike the full one.
+    # header = ["Id","Song","Artist","Length","Times_played"]
+    # rw.write_songs(header,songs_csv_path,music_key_details)
     
     # this is where we add all the data of each song to a csv.
     # this will only be updated when the system stops running.
     header = ["Id","Song","Artist","Length","song_credits","Audio_type","File_path","Times_played","Date_added"]
-    #rw.write_songs(header,full_data_path,music_full)
+    rw.write_songs(header,full_data_path,new_dict_full)
 
-    # MARKER.parent.mkdir(parents=True, exist_ok=True)
-    # MARKER.write_text(
-    #     json.dumps({"when": datetime.now().isoformat()}),
-    #     encoding="utf-8"
-    # )
+    MARKER.parent.mkdir(parents=True, exist_ok=True)
+    MARKER.write_text(
+        json.dumps({"when": datetime.now().isoformat()}),
+        encoding="utf-8"
+    )
 
-old_dict = {}
-new_dict_credits = {}
-new_dict_artists = {}
-new_dict_songs = {}
-
-def write_again():
+def update_csvs():
     rw.read_songs(full_data_path, old_dict)
     for song_id, data in old_dict.items():
         title = data[0]
@@ -93,23 +90,15 @@ def write_again():
         length = data[2]
         song_credits = data[3]
         times_played = data[6]
-        artist_credits = 10
-        print(song_id, title, artist, length, song_credits, times_played, artist_credits)
 
         new_dict_credits[song_id] = [length] + [song_credits]
-        new_dict_artists[artist] = [artist_credits]
-        new_dict_songs[song_id] = [title] + [artist] + [length] + [times_played]
+        new_dict_songs[song_id] =  [times_played]
 
         # as an initialization step the 10 credit will be added to each song.
         header = ["Id", "length", "song_credits"]
         rw.write_songs(header, credit_csv_path, new_dict_credits)
 
-        header = ["Artist", "artist_credits"]
-        rw.write_songs(header, artists_csv_path, new_dict_artists)
-
         # this is made so to be able to update the csv while running unlike the full one.
-        header = ["Id", "Song", "Artist", "Length", "Times_played"]
+        header = ["Id","Times_played"]
         rw.write_songs(header, songs_csv_path, new_dict_songs)
 
-
-write_again()

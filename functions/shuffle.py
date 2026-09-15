@@ -31,7 +31,7 @@ def deduct_credits(song_id, played_time):
     # 3. Compute new credit
     if length > 0:
         fraction_played = played_time / length
-        new_credit = int(credit * fraction_played)
+        new_credit = float((float(credit) * float(fraction_played))/10)
     else:
         new_credit = credit
 
