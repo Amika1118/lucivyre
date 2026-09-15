@@ -44,5 +44,8 @@ def deduct_credits(song_id, played_time):
 
 
 
-def add_credits():
-    print("Add Credits")
+def add_credits(song_list):
+    rw.read_songs(credits_file, song_credits)
+
+    if len(song_list) == 1:
+        song_id = song_list[0]
