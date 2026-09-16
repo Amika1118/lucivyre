@@ -1,0 +1,2344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="author" content="Amika Alankara"/>
+    <meta name="description"
+          content="Lucivyre - a Python music player with live controls, playlists, search, a credit system, and an algorithmic shuffle that learns what you love."/>
+    <title>Lucivyre | A Music Player That Learns</title>
+    <style>
+        :root {
+            --bg: #0a0b10;
+            --panel: #12141c;
+            --panel-2: #171a24;
+            --border: #232838;
+            --text: #e6e9ef;
+            --muted: #8b93a7;
+            --brand: #7c5cff;
+            --brand-2: #a78bfa;
+            --go: #4ade80;
+            --mid: #60a5fa;
+            --no: #f87171;
+            --mono: "SF Mono", "JetBrains Mono", "Fira Code", Consolas, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        a {
+            color: var(--brand-2);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .wrap {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ---------- PRELOADER (two-panel curtain) ---------- */
+        #preloader {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            pointer-events: auto;
+            transition: pointer-events 0s 1.7s;
+        }
+
+        #preloader.hidden {
+            pointer-events: none;
+        }
+
+        /* the two panels */
+        .curtain {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: #08090f;
+            will-change: transform;
+            z-index: 1;
+            transition: transform 1.1s cubic-bezier(0.76, 0, 0.24, 1);
+        }
+
+        .curtain-top {
+            top: 0;
+            background: linear-gradient(to bottom, #04050a 0%, #08090f 60%, #0f1020 100%);
+        }
+
+        .curtain-bottom {
+            bottom: 0;
+            background: linear-gradient(to top, #04050a 0%, #08090f 60%, #0f1020 100%);
+        }
+
+        /* the glowing seam that splits */
+        .curtain-top::after,
+        .curtain-bottom::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(124, 92, 255, 0.7) 20%,
+            rgba(167, 139, 250, 1) 50%,
+            rgba(124, 92, 255, 0.7) 80%,
+            transparent 100%);
+            box-shadow: 0 0 12px rgba(124, 92, 255, 0.8),
+            0 0 32px rgba(124, 92, 255, 0.5);
+            opacity: 0;
+            animation: seamGlow 2.5s ease-in-out infinite;
+        }
+
+        .curtain-top::after {
+            bottom: 0;
+        }
+
+        .curtain-bottom::before {
+            top: 0;
+        }
+
+        @keyframes seamGlow {
+            0%, 100% {
+                opacity: 0.6;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+        /* fade the seam out as the curtains part */
+        #preloader.hidden .curtain-top::after,
+        #preloader.hidden .curtain-bottom::before {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* slide the panels apart */
+        #preloader.hidden .curtain-top {
+            transform: translateY(-100%);
+        }
+
+        #preloader.hidden .curtain-bottom {
+            transform: translateY(100%);
+        }
+
+        /* content (logo, bar, tagline) sits between the curtains */
+        .preloader-inner {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 28px;
+            padding: 24px;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+
+        #preloader.hidden .preloader-inner {
+            opacity: 0;
+            transform: scale(0.94);
+        }
+
+        .preloader-logo {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: clamp(32px, 6vw, 56px);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+        }
+
+        .preloader-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--brand);
+            box-shadow: 0 0 24px var(--brand), 0 0 48px rgba(124, 92, 255, 0.5);
+            animation: preloaderPulse 1.4s ease-in-out infinite;
+        }
+
+        @keyframes preloaderPulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.4);
+                opacity: 0.6;
+            }
+        }
+
+        .preloader-name {
+            display: inline-flex;
+        }
+
+        .preloader-name span {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--text) 0%, var(--brand-2) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: preloaderLetter 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .preloader-name span:nth-child(1) {
+            animation-delay: 0.10s;
+        }
+
+        .preloader-name span:nth-child(2) {
+            animation-delay: 0.28s;
+        }
+
+        .preloader-name span:nth-child(3) {
+            animation-delay: 0.46s;
+        }
+
+        .preloader-name span:nth-child(4) {
+            animation-delay: 0.64s;
+        }
+
+        .preloader-name span:nth-child(5) {
+            animation-delay: 0.82s;
+        }
+
+        .preloader-name span:nth-child(6) {
+            animation-delay: 1.00s;
+        }
+
+        .preloader-name span:nth-child(7) {
+            animation-delay: 1.18s;
+        }
+
+        .preloader-name span:nth-child(8) {
+            animation-delay: 1.36s;
+        }
+
+        @keyframes preloaderLetter {
+            0% {
+                opacity: 0;
+                transform: translateY(20px) rotateX(-40deg);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) rotateX(0);
+            }
+        }
+
+        .preloader-bar {
+            width: min(280px, 60vw);
+            height: 2px;
+            background: rgba(35, 40, 56, 0.6);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .preloader-fill {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, var(--brand), var(--brand-2), var(--brand));
+            background-size: 200% 100%;
+            transform-origin: left center;
+            transform: scaleX(0);
+            animation: preloaderBar 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards,
+            preloaderShimmer 1.4s linear infinite;
+        }
+
+        @keyframes preloaderBar {
+            0% {
+                transform: scaleX(0);
+            }
+            100% {
+                transform: scaleX(1);
+            }
+        }
+
+        @keyframes preloaderShimmer {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .preloader-tagline {
+            font-size: 12px;
+            color: var(--muted);
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-weight: 600;
+            opacity: 0;
+            animation: preloaderTagline 0.8s ease 1.4s forwards;
+        }
+
+        @keyframes preloaderTagline {
+            to {
+                opacity: 0.7;
+            }
+        }
+
+        body.loading {
+            overflow: hidden;
+        }
+
+        /* ---------- NAV ---------- */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(10, 11, 16, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        nav .wrap {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: -0.02em;
+        }
+
+        .logo .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--brand);
+            box-shadow: 0 0 16px var(--brand);
+        }
+
+        nav ul {
+            display: flex;
+            gap: 28px;
+            list-style: none;
+            align-items: center;
+        }
+
+        nav ul a {
+            color: var(--muted);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        nav ul a:hover {
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        /* ---------- HERO ---------- */
+        .hero {
+            padding: 100px 0 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            top: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 900px;
+            height: 900px;
+            background: radial-gradient(circle, rgba(124, 92, 255, 0.18) 0%, transparent 60%);
+            pointer-events: none;
+            animation: drift 14s ease-in-out infinite;
+        }
+
+        .hero .wrap {
+            position: relative;
+        }
+
+        .hero .tag,
+        .hero h1,
+        .hero .lede,
+        .hero .cta,
+        .hero .hero-stats {
+            opacity: 0;
+            animation: fadeUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .hero .tag {
+            animation-delay: 0.05s;
+        }
+
+        .hero h1 {
+            animation-delay: 0.15s;
+        }
+
+        .hero .lede {
+            animation-delay: 0.25s;
+        }
+
+        .hero .cta {
+            animation-delay: 0.35s;
+        }
+
+        .hero .hero-stats {
+            animation-delay: 0.45s;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes drift {
+            0%, 100% {
+                transform: translateX(-50%) scale(1);
+            }
+            50% {
+                transform: translateX(-46%) scale(1.08);
+            }
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 6px 14px;
+            background: rgba(124, 92, 255, 0.12);
+            border: 1px solid rgba(124, 92, 255, 0.3);
+            color: var(--brand-2);
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: clamp(38px, 5.5vw, 64px);
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+            font-weight: 800;
+            margin-bottom: 24px;
+            max-width: 900px;
+        }
+
+        h1 .accent {
+            background: linear-gradient(135deg, var(--brand-2), var(--brand), var(--brand-2));
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 4s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .lede {
+            font-size: 19px;
+            color: var(--muted);
+            max-width: 680px;
+            margin-bottom: 36px;
+        }
+
+        .cta {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 48px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 22px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 15px;
+            border: 1px solid var(--border);
+            background: var(--panel);
+            color: var(--text);
+            transition: all 0.15s;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            border-color: var(--brand);
+            text-decoration: none;
+        }
+
+        .btn.primary {
+            background: var(--brand);
+            border-color: var(--brand);
+            color: white;
+        }
+
+        .btn.primary:hover {
+            background: var(--brand-2);
+            border-color: var(--brand-2);
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            padding-top: 32px;
+            border-top: 1px solid var(--border);
+        }
+
+        .stat-value {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text);
+            font-family: var(--mono);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* ---------- SECTIONS ---------- */
+        section {
+            padding: 88px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .kicker {
+            color: var(--brand-2);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        h2 {
+            font-size: clamp(28px, 4vw, 42px);
+            letter-spacing: -0.02em;
+            font-weight: 800;
+            margin-bottom: 16px;
+            max-width: 780px;
+        }
+
+        .section-lede {
+            color: var(--muted);
+            font-size: 17px;
+            max-width: 680px;
+            margin-bottom: 48px;
+        }
+
+        /* ---------- SCROLL REVEAL ---------- */
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.75s cubic-bezier(0.4, 0, 0.2, 1),
+            transform 0.75s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .features.reveal {
+            transform: none;
+            opacity: 0;
+        }
+
+        .features.reveal .feature {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .features.reveal.visible {
+            opacity: 1;
+        }
+
+        .features.reveal.visible .feature {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .features.reveal.visible .feature:nth-child(1) {
+            transition-delay: 0.00s;
+        }
+
+        .features.reveal.visible .feature:nth-child(2) {
+            transition-delay: 0.06s;
+        }
+
+        .features.reveal.visible .feature:nth-child(3) {
+            transition-delay: 0.12s;
+        }
+
+        .features.reveal.visible .feature:nth-child(4) {
+            transition-delay: 0.18s;
+        }
+
+        .features.reveal.visible .feature:nth-child(5) {
+            transition-delay: 0.24s;
+        }
+
+        .features.reveal.visible .feature:nth-child(6) {
+            transition-delay: 0.30s;
+        }
+
+        .features.reveal.visible .feature:nth-child(7) {
+            transition-delay: 0.36s;
+        }
+
+        .features.reveal.visible .feature:nth-child(8) {
+            transition-delay: 0.42s;
+        }
+
+        .roadmap.reveal .milestone {
+            opacity: 0;
+            transform: translateX(-16px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .roadmap.reveal.visible .milestone {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .roadmap.reveal.visible .milestone:nth-child(1) {
+            transition-delay: 0.00s;
+        }
+
+        .roadmap.reveal.visible .milestone:nth-child(2) {
+            transition-delay: 0.06s;
+        }
+
+        .roadmap.reveal.visible .milestone:nth-child(3) {
+            transition-delay: 0.12s;
+        }
+
+        .roadmap.reveal.visible .milestone:nth-child(4) {
+            transition-delay: 0.18s;
+        }
+
+        .roadmap.reveal.visible .milestone:nth-child(5) {
+            transition-delay: 0.24s;
+        }
+
+        .roadmap.reveal.visible .milestone:nth-child(6) {
+            transition-delay: 0.30s;
+        }
+
+        .roadmap.reveal.visible .milestone:nth-child(7) {
+            transition-delay: 0.36s;
+        }
+
+        .roadmap.reveal.visible .milestone:nth-child(8) {
+            transition-delay: 0.42s;
+        }
+
+        /* ---------- FEATURES ---------- */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .feature {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 26px;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .feature:hover {
+            border-color: var(--brand);
+            transform: translateY(-3px);
+        }
+
+        .feature-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: rgba(124, 92, 255, 0.12);
+            border: 1px solid rgba(124, 92, 255, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 16px;
+        }
+
+        .feature h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.01em;
+        }
+
+        .feature p {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .feature code {
+            font-family: var(--mono);
+            font-size: 12.5px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 1px 6px;
+            border-radius: 4px;
+            color: var(--text);
+        }
+
+        .check {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--go);
+            margin-top: 14px;
+        }
+
+        /* ---------- TERMINAL ---------- */
+        .terminal {
+            background: #0d0f16;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-top: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--panel-2);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .terminal-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.r {
+            background: #ff5f56;
+        }
+
+        .terminal-dot.y {
+            background: #ffbd2e;
+        }
+
+        .terminal-dot.g {
+            background: #27c93f;
+        }
+
+        .terminal-title {
+            margin-left: 12px;
+            color: var(--muted);
+            font-size: 12px;
+            font-family: var(--mono);
+        }
+
+        .terminal-body {
+            padding: 22px 24px;
+            font-family: var(--mono);
+            font-size: 13.5px;
+            line-height: 1.8;
+            color: #c8cede;
+        }
+
+        .terminal-body .dim {
+            color: #4b5563;
+        }
+
+        .terminal-body .prompt {
+            color: var(--brand-2);
+        }
+
+        .terminal-body .ok {
+            color: var(--go);
+        }
+
+        .terminal-body .warn {
+            color: #fbbf24;
+        }
+
+        .terminal-body .accent {
+            color: var(--brand-2);
+        }
+
+        /* ---------- ALGORITHM ---------- */
+        .tiers {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .tiers.reveal .tier {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .tiers.reveal.visible .tier {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .tiers.reveal.visible .tier:nth-child(1) {
+            transition-delay: 0.05s;
+        }
+
+        .tiers.reveal.visible .tier:nth-child(2) {
+            transition-delay: 0.15s;
+        }
+
+        .tiers.reveal.visible .tier:nth-child(3) {
+            transition-delay: 0.25s;
+        }
+
+        .tier {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tier::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .tier.go::before {
+            background: var(--go);
+        }
+
+        .tier.mid::before {
+            background: var(--mid);
+        }
+
+        .tier.no::before {
+            background: var(--no);
+        }
+
+        .tier-name {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+        }
+
+        .tier.go .tier-name {
+            color: var(--go);
+        }
+
+        .tier.mid .tier-name {
+            color: var(--mid);
+        }
+
+        .tier.no .tier-name {
+            color: var(--no);
+        }
+
+        .tier-range {
+            font-family: var(--mono);
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 16px;
+        }
+
+        .tier-formula {
+            font-family: var(--mono);
+            font-size: 13px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            color: var(--text);
+            overflow-x: auto;
+        }
+
+        .tier-desc {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        /* ---------- SCALE ---------- */
+        .scale {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+
+        .scale-bar {
+            display: flex;
+            height: 48px;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            margin-bottom: 12px;
+        }
+
+        .scale-seg {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transform-origin: left center;
+            transform: scaleX(0);
+            transition: transform 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .scale.visible .scale-seg.no {
+            transform: scaleX(1);
+            transition-delay: 0.05s;
+        }
+
+        .scale.visible .scale-seg.mid {
+            transform: scaleX(1);
+            transition-delay: 0.18s;
+        }
+
+        .scale.visible .scale-seg.go {
+            transform: scaleX(1);
+            transition-delay: 0.31s;
+        }
+
+        .scale-seg.no {
+            background: linear-gradient(180deg, #f87171, #dc2626);
+            flex: 5;
+        }
+
+        .scale-seg.mid {
+            background: linear-gradient(180deg, #60a5fa, #2563eb);
+            flex: 10;
+        }
+
+        .scale-seg.go {
+            background: linear-gradient(180deg, #4ade80, #16a34a);
+            flex: 10;
+        }
+
+        .scale-labels {
+            display: flex;
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .scale-labels span {
+            flex: 1;
+        }
+
+        .scale-labels span:last-child {
+            text-align: right;
+        }
+
+        /* ---------- CODE ---------- */
+        pre {
+            background: #0d0f16;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-x: auto;
+            font-family: var(--mono);
+            font-size: 13.5px;
+            line-height: 1.7;
+            color: #c8cede;
+        }
+
+        pre .kw {
+            color: #c084fc;
+        }
+
+        pre .fn {
+            color: #7dd3fc;
+        }
+
+        pre .num {
+            color: #fbbf24;
+        }
+
+        pre .str {
+            color: #86efac;
+        }
+
+        pre .cm {
+            color: #4b5563;
+            font-style: italic;
+        }
+
+        /* ---------- DEMO ---------- */
+        .demo {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .demo-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--panel-2);
+        }
+
+        .demo-title {
+            font-weight: 700;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .demo-title .pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--go);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        .demo-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .demo-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+
+        .demo-btn:hover {
+            border-color: var(--brand);
+        }
+
+        .demo-btn.primary {
+            background: var(--brand);
+            border-color: var(--brand);
+            color: white;
+        }
+
+        .demo-btn.primary:hover {
+            background: var(--brand-2);
+        }
+
+        .demo-list {
+            padding: 8px;
+            min-height: 400px;
+            position: relative;
+        }
+
+        .song {
+            display: grid;
+            grid-template-columns: 40px 1fr auto auto auto;
+            gap: 16px;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 10px;
+            transition: background 0.15s;
+        }
+
+        .song.enter {
+            animation: slideIn 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .song.highlight {
+            animation: highlightTop 1.1s ease;
+        }
+
+        .song:hover {
+            background: var(--panel-2);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes highlightTop {
+            0% {
+                background: rgba(124, 92, 255, 0.25);
+                box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.4);
+            }
+            60% {
+                background: rgba(124, 92, 255, 0.15);
+                box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.25);
+            }
+            100% {
+                background: transparent;
+                box-shadow: inset 0 0 0 1px transparent;
+            }
+        }
+
+        .song-rank {
+            font-family: var(--mono);
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .song-title {
+            font-weight: 600;
+            font-size: 14.5px;
+        }
+
+        .song-artist {
+            color: var(--muted);
+            font-size: 12.5px;
+        }
+
+        .song-score {
+            font-family: var(--mono);
+            font-size: 12.5px;
+            color: var(--muted);
+            text-align: right;
+        }
+
+        .song-score strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .song-tier {
+            font-family: var(--mono);
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            padding: 4px 10px;
+            border-radius: 6px;
+            min-width: 48px;
+            text-align: center;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .song-tier.go {
+            background: rgba(74, 222, 128, 0.12);
+            color: var(--go);
+        }
+
+        .song-tier.mid {
+            background: rgba(96, 165, 250, 0.12);
+            color: var(--mid);
+        }
+
+        .song-tier.no {
+            background: rgba(248, 113, 113, 0.12);
+            color: var(--no);
+        }
+
+        .song-key {
+            font-family: var(--mono);
+            font-size: 11.5px;
+            color: var(--muted);
+            text-align: right;
+            min-width: 90px;
+        }
+
+        /* ---------- ROADMAP ---------- */
+        .roadmap {
+            position: relative;
+            padding-left: 32px;
+        }
+
+        .roadmap::before {
+            content: "";
+            position: absolute;
+            left: 7px;
+            top: 8px;
+            bottom: 8px;
+            width: 2px;
+            background: linear-gradient(180deg, var(--go), var(--brand), var(--border));
+        }
+
+        .milestone {
+            position: relative;
+            margin-bottom: 32px;
+        }
+
+        .milestone::before {
+            content: "";
+            position: absolute;
+            left: -32px;
+            top: 6px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--bg);
+            border: 2px solid var(--border);
+        }
+
+        .milestone.done::before {
+            background: var(--go);
+            border-color: var(--go);
+        }
+
+        .milestone.active::before {
+            background: var(--brand);
+            border-color: var(--brand);
+            animation: breathe 2.2s ease-in-out infinite;
+        }
+
+        @keyframes breathe {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(124, 92, 255, 0.45);
+            }
+            50% {
+                box-shadow: 0 0 0 8px rgba(124, 92, 255, 0);
+            }
+        }
+
+        .milestone h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .milestone p {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .milestone code {
+            font-family: var(--mono);
+            font-size: 12.5px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            padding: 1px 6px;
+            border-radius: 4px;
+            color: var(--text);
+        }
+
+        .status-pill {
+            font-family: var(--mono);
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 3px 9px;
+            border-radius: 5px;
+        }
+
+        .status-pill.done {
+            background: rgba(74, 222, 128, 0.12);
+            color: var(--go);
+        }
+
+        .status-pill.active {
+            background: rgba(124, 92, 255, 0.18);
+            color: var(--brand-2);
+        }
+
+        .status-pill.next {
+            background: rgba(139, 147, 167, 0.12);
+            color: var(--muted);
+        }
+
+        /* ---------- CONTRIBUTE ---------- */
+        .contribute-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .contrib-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 28px;
+        }
+
+        .contrib-card.dark {
+            background: var(--panel-2);
+        }
+
+        .contrib-card h3 {
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            margin-bottom: 18px;
+        }
+
+        .contrib-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .contrib-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 14.5px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .contrib-list code,
+        .steps code {
+            font-family: var(--mono);
+            font-size: 12.5px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 1px 6px;
+            border-radius: 4px;
+            color: var(--text);
+        }
+
+        .contrib-tag {
+            flex-shrink: 0;
+            font-family: var(--mono);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 5px;
+            min-width: 46px;
+            text-align: center;
+        }
+
+        .contrib-tag.code {
+            background: rgba(96, 165, 250, 0.12);
+            color: var(--mid);
+        }
+
+        .contrib-tag.ui {
+            background: rgba(124, 92, 255, 0.15);
+            color: var(--brand-2);
+        }
+
+        .contrib-tag.docs {
+            background: rgba(74, 222, 128, 0.12);
+            color: var(--go);
+        }
+
+        .contrib-tag.idea {
+            background: rgba(251, 191, 36, 0.12);
+            color: #fbbf24;
+        }
+
+        .steps {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .steps li {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .step-num {
+            flex-shrink: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(124, 92, 255, 0.15);
+            border: 1px solid rgba(124, 92, 255, 0.3);
+            color: var(--brand-2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .steps strong {
+            display: block;
+            font-size: 14.5px;
+            color: var(--text);
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .steps p {
+            font-size: 13.5px;
+            color: var(--muted);
+        }
+
+        .contrib-cta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .invite-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            padding: 28px 32px;
+            background: linear-gradient(135deg, rgba(124, 92, 255, 0.12), rgba(124, 92, 255, 0.04));
+            border: 1px solid rgba(124, 92, 255, 0.25);
+            border-radius: 16px;
+            flex-wrap: wrap;
+        }
+
+        .invite-title {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+        }
+
+        .invite-sub {
+            color: var(--muted);
+            font-size: 14.5px;
+        }
+
+        /* ---------- FOOTER ---------- */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 56px 0 48px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        footer .wrap {
+            display: flex;
+            justify-content: center;
+        }
+
+        .footer-author {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            text-align: center;
+        }
+
+        .footer-signature {
+            font-size: 15px;
+            color: var(--muted);
+            letter-spacing: 0.01em;
+        }
+
+        .footer-signature .heart {
+            color: #f87171;
+            display: inline-block;
+            animation: heartbeat 1.6s ease-in-out infinite;
+            margin: 0 2px;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% {
+                transform: scale(1);
+            }
+            25% {
+                transform: scale(1.18);
+            }
+            50% {
+                transform: scale(1);
+            }
+        }
+
+        .author-name {
+            color: var(--text);
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--brand-2), var(--brand), var(--brand-2));
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 4s ease infinite;
+            text-decoration: none;
+        }
+
+        .author-name:hover {
+            text-decoration: none;
+            opacity: 0.85;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 22px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .footer-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            color: var(--muted);
+            font-size: 13.5px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            transition: color 0.2s, border-color 0.2s, background 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--text);
+            border-color: var(--border);
+            background: var(--panel);
+            text-decoration: none;
+        }
+
+        .footer-links a svg {
+            opacity: 0.7;
+        }
+
+        .footer-links a:hover svg {
+            opacity: 1;
+        }
+
+        .footer-meta {
+            font-size: 12px;
+            color: var(--muted);
+            opacity: 0.7;
+            letter-spacing: 0.02em;
+        }
+
+        /* ---------- RESPONSIVE ---------- */
+        @media (max-width: 720px) {
+            .tiers {
+                grid-template-columns: 1fr;
+            }
+
+            .contribute-grid {
+                grid-template-columns: 1fr;
+            }
+
+            nav ul {
+                display: none;
+            }
+
+            .song {
+                grid-template-columns: 32px 1fr auto;
+                gap: 12px;
+            }
+
+            .song-score, .song-key {
+                display: none;
+            }
+
+            .hero-stats {
+                gap: 24px;
+            }
+        }
+
+        /* ---------- ACCESSIBILITY ---------- */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+
+            .reveal, .reveal.visible,
+            .hero .tag, .hero h1, .hero .lede, .hero .cta, .hero .hero-stats {
+                opacity: 1 !important;
+                transform: none !important;
+            }
+
+            .scale-seg {
+                transform: scaleX(1) !important;
+            }
+
+            .preloader-name span {
+                opacity: 1 !important;
+                transform: none !important;
+            }
+
+            .preloader-fill {
+                transform: scaleX(1) !important;
+            }
+
+            .preloader-tagline {
+                opacity: 0.7 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ============ PRELOADER (two-panel curtain) ============ -->
+<div id="preloader">
+    <div class="curtain curtain-top"></div>
+    <div class="curtain curtain-bottom"></div>
+    <div class="preloader-inner">
+        <div class="preloader-logo">
+            <span class="preloader-dot"></span>
+            <span class="preloader-name">
+        <span>L</span><span>u</span><span>c</span><span>i</span><span>v</span><span>y</span><span>r</span><span>e</span>
+      </span>
+        </div>
+        <div class="preloader-bar">
+            <div class="preloader-fill"></div>
+        </div>
+        <div class="preloader-tagline">A music player that listens back</div>
+    </div>
+</div>
+
+<!-- ============ NAV ============ -->
+<nav>
+    <div class="wrap">
+        <div class="logo"><span class="dot"></span> Lucivyre</div>
+        <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#algorithm">Algorithm</a></li>
+            <li><a href="#demo">Demo</a></li>
+            <li><a href="#roadmap">Roadmap</a></li>
+            <li>
+                <a href="https://github.com/Amika1118/lucivyre" target="_blank" rel="noopener"
+                   style="display:inline-flex; align-items:center; gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.18-1.49 3.14-1.18 3.14-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.25 5.68.41.35.78 1.05.78 2.12 0 1.53-.01 2.76-.01 3.14 0 .31.21.68.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/>
+                    </svg>
+                    GitHub
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+    <div class="wrap">
+        <div class="tag">Personal project · 2026</div>
+        <h1>A music player that<br>actually <span class="accent">listens back</span>.</h1>
+        <p class="lede">
+            Lucivyre is a Python command-line music player with live controls, playlists,
+            search, a credit system, and an algorithmic shuffle that rewards the songs
+            you love - while quietly burying the ones you skip.
+        </p>
+        <div class="cta">
+            <a class="btn primary" href="#demo">Try the shuffle →</a>
+            <a class="btn" href="#features">See what's built</a>
+            <a class="btn" href="https://github.com/Amika1118/lucivyre" target="_blank" rel="noopener">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.18-1.49 3.14-1.18 3.14-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.25 5.68.41.35.78 1.05.78 2.12 0 1.53-.01 2.76-.01 3.14 0 .31.21.68.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/>
+                </svg>
+                Star on GitHub
+            </a>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat">
+                <div class="stat-value">10</div>
+                <div class="stat-label">Core modules</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">3</div>
+                <div class="stat-label">Scoring tiers</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">O(N log N)</div>
+                <div class="stat-label">Shuffle complexity</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">100%</div>
+                <div class="stat-label">Python + stdlib</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ FEATURES ============ -->
+<section id="features">
+    <div class="wrap">
+        <div class="kicker">The Player</div>
+        <h2>A full music player, built from scratch.</h2>
+        <p class="section-lede">
+            Lucivyre isn't a wrapper around Spotify or VLC. It reads your files, builds
+            its own library, tracks what you play, and learns from every skip and replay -
+            all in pure Python.
+        </p>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">🎵</div>
+                <h3>Metadata &amp; playback</h3>
+                <p>Reads title, artist, duration, and artwork via <code>mutagen</code>. Streams audio with <code>pygame.mixer</code>
+                    across MP3, WAV, FLAC, and OGG.</p>
+                <div class="check">● Working</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📚</div>
+                <h3>Library scan</h3>
+                <p>Point it at a folder, and it walks the tree, filters audio files by MIME type, and builds a
+                    searchable index. Handles 1,000+ song catalogs.</p>
+                <div class="check">● Working</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🔍</div>
+                <h3>Search</h3>
+                <p>Search by title, artist, or both. Case-insensitive contains matching across the whole library. Queue
+                    a song from search and it plays next - mid-playback.</p>
+                <div class="check">● Working</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📋</div>
+                <h3>Playlists &amp; sorting</h3>
+                <p>Sorted views by title, artist, date added, and play count - ascending or descending. Build custom
+                    playlists and shuffle any of them.</p>
+                <div class="check">● Working</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">⏯️</div>
+                <h3>Live controls</h3>
+                <p>Pause, resume, skip, next, back, quit - all while music plays. Powered by a non-blocking command
+                    queue + input thread.</p>
+                <div class="check">● Working</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">⏱️</div>
+                <h3>Dual timers</h3>
+                <p>Current song progress and total session time, refreshed 4× per second with a fixed-width status bar.
+                    Freezes on pause, resumes on play.</p>
+                <div class="check">● Working</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">💳</div>
+                <h3>Credit system</h3>
+                <p>Every song starts with credits. Skip early and you pay the cost. Play fully and it stays. Playing
+                    from search earns bonus points. Drives the score.</p>
+                <div class="check">● Working</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">💾</div>
+                <h3>Persistent library</h3>
+                <p>Full library and credits stored in CSV - easy to inspect, edit, or migrate. Moving to SQLite next for
+                    faster writes on large catalogs.</p>
+                <div class="check">● Working</div>
+            </div>
+        </div>
+
+        <div class="terminal">
+            <div class="terminal-header">
+                <div class="terminal-dot r"></div>
+                <div class="terminal-dot y"></div>
+                <div class="terminal-dot g"></div>
+                <div class="terminal-title">lucivyre - python main.py</div>
+            </div>
+            <div class="terminal-body">
+                <span class="dim">Welcome to Lucivyre</span>
+                <span class="prompt">›</span> 01. Recently added
+                <span class="prompt">›</span> 02. Most played
+                <span class="prompt">›</span> 03. By artist
+                <span class="prompt">›</span> 04. Shuffle
+                <span class="prompt">›</span> 05. Search
+                <span class="prompt">›</span> 06. Exit
+
+                Enter your choice: <span class="accent">04</span>
+
+                <span class="dim">Building shuffled playlist…</span>
+                <span class="dim">Sorting by effective score + sampled key</span>
+                <span class="ok">✓ 47 songs queued</span>
+
+                Session: 0:00 [>] 0:00 / 6:53
+                [1/47] Time - Pink Floyd
+                <span class="prompt">›</span> <span class="ok">playing</span> - commands: [p]ause [n]ext [s]top
+                [/]search [q]uit
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ ALGORITHM ============ -->
+<section id="algorithm">
+    <div class="wrap">
+        <div class="kicker">The Shuffle</div>
+        <h2>Not random. Not rigid.<br>Just fair.</h2>
+        <p class="section-lede">
+            Regular shuffle treats every song the same - it doesn't care what you love.
+            Lucivyre gives each song a <em>score</em>. That score is mapped to an effective
+            score across three tiers, then shaped into a random key so high-scoring songs
+            drift toward the top without ever being locked there.
+        </p>
+
+        <div class="tiers">
+            <div class="tier go">
+                <div class="tier-name">GO</div>
+                <div class="tier-range">score &gt; 15.0</div>
+                <div class="tier-formula">S' = S × 3.0</div>
+                <div class="tier-desc">
+                    Heavy boost. Songs you keep coming back to get pushed toward the top
+                    of every shuffle - but never rigidly.
+                </div>
+            </div>
+            <div class="tier mid">
+                <div class="tier-name">MID</div>
+                <div class="tier-range">5.0 ≤ score ≤ 15.0</div>
+                <div class="tier-formula">S' = S</div>
+                <div class="tier-desc">
+                    Standard weight. The baseline of 10.0 lives here - the neutral
+                    listening zone where most songs sit.
+                </div>
+            </div>
+            <div class="tier no">
+                <div class="tier-name">NO</div>
+                <div class="tier-range">score &lt; 5.0</div>
+                <div class="tier-formula">S' = max(S, 0.05) × 0.1</div>
+                <div class="tier-desc">
+                    Heavy penalty. Skipped songs sink to the bottom, but never quite
+                    disappear - they still have a small chance to resurface.
+                </div>
+            </div>
+        </div>
+
+        <div class="scale">
+            <div class="scale-bar">
+                <div class="scale-seg no">NO · penalized</div>
+                <div class="scale-seg mid">MID · neutral</div>
+                <div class="scale-seg go">GO · boosted</div>
+            </div>
+            <div class="scale-labels">
+                <span>0.0</span>
+                <span>5.0</span>
+                <span>15.0</span>
+                <span>25.0+</span>
+            </div>
+        </div>
+
+        <h3 style="font-size:20px; font-weight:700; margin:40px 0 12px; letter-spacing:-0.01em;">
+            Exponential key sampling (A-ES)
+        </h3>
+        <p style="color:var(--muted); max-width: 680px; margin-bottom: 24px;">
+            For each song, draw a uniform random number and compute a key. Sort by key
+            descending. Higher effective scores cluster near the top, but every shuffle
+            is different - low-scoring songs still surface sometimes.
+        </p>
+
+        <pre><span class="kw">import</span> math, random
+
+<span class="kw">def</span> <span class="fn">effective_score</span>(score):
+    <span class="kw">if</span> score &gt; <span class="num">15.0</span>:
+        <span class="kw">return</span> score * <span class="num">3.0</span>          <span class="cm"># GO tier</span>
+    <span class="kw">if</span> score &lt; <span class="num">5.0</span>:
+        <span class="kw">return</span> max(score, <span class="num">0.05</span>) * <span class="num">0.1</span>  <span
+                    class="cm"># NO tier</span>
+    <span class="kw">return</span> score                    <span class="cm"># MID tier</span>
+
+<span class="kw">def</span> <span class="fn">shuffle</span>(songs):
+    keys = []
+    <span class="kw">for</span> song <span class="kw">in</span> songs:
+        u = random.uniform(<span class="num">0.0001</span>, <span class="num">0.9999</span>)
+        s_prime = <span class="fn">effective_score</span>(song[<span class="str">"score"</span>])
+        k = math.log(u) / s_prime
+        keys.append((k, song))
+    keys.sort(key=<span class="kw">lambda</span> x: x[<span class="num">0</span>], reverse=<span class="kw">True</span>)
+    <span class="kw">return</span> [s <span class="kw">for</span> _, s <span class="kw">in</span> keys]</pre>
+
+        <p style="color:var(--muted); font-size:14px; margin-top:20px; max-width:680px;">
+            Time complexity is <code style="font-family:var(--mono); color:var(--text);">O(N log N)</code>
+            for a full pass, or <code style="font-family:var(--mono); color:var(--text);">O(N log K)</code>
+            with a heap when you only need the top K. Memory is
+            <code style="font-family:var(--mono); color:var(--text);">O(N)</code>.
+        </p>
+    </div>
+</section>
+
+<!-- ============ DEMO ============ -->
+<section id="demo">
+    <div class="wrap">
+        <div class="kicker">Live Demo</div>
+        <h2>Watch the shuffle in action.</h2>
+        <p class="section-lede">
+            Twelve songs with different scores. Hit <strong>Shuffle</strong> to run the
+            algorithm - each row flies to its new rank, and the top spot lights up.
+        </p>
+
+        <div class="demo">
+            <div class="demo-header">
+                <div class="demo-title">
+                    <span class="pulse"></span>
+                    <span id="demo-status">Ready</span>
+                </div>
+                <div class="demo-controls">
+                    <button class="demo-btn" id="reset-btn">Reset</button>
+                    <button class="demo-btn primary" id="shuffle-btn">Shuffle</button>
+                </div>
+            </div>
+            <div class="demo-list" id="demo-list"></div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ ROADMAP ============ -->
+<section id="roadmap">
+    <div class="wrap">
+        <div class="kicker">Roadmap</div>
+        <h2>What's next.</h2>
+        <p class="section-lede">
+            The player runs today. From here: move scoring into SQLite, wire the shuffle
+            into the player, and let feedback flow back automatically on every listen.
+        </p>
+
+        <div class="roadmap">
+            <div class="milestone done">
+                <h3>Core player <span class="status-pill done">Done</span></h3>
+                <p>Playback, metadata, library scan, search, playlists, live controls, dual timers.</p>
+            </div>
+            <div class="milestone done">
+                <h3>Credit system <span class="status-pill done">Done</span></h3>
+                <p>Skips deduct credits proportionally. Full plays keep them. Search plays earn bonus points.</p>
+            </div>
+            <div class="milestone done">
+                <h3>Shuffle algorithm design <span class="status-pill done">Done</span></h3>
+                <p>Three-tier effective score mapping and exponential key sampling fully specified.</p>
+            </div>
+            <div class="milestone active">
+                <h3>SQLite score store <span class="status-pill active">In progress</span></h3>
+                <p><code>scores.db</code> with an <code>item_scores</code> table. Atomic upserts via <code>ON CONFLICT
+                    DO UPDATE</code>. CSV import/export for portability.</p>
+            </div>
+            <div class="milestone">
+                <h3>Shuffle integration <span class="status-pill next">Next</span></h3>
+                <p>Plug the effective-score + key sampling shuffle into the player's shuffle mode.</p>
+            </div>
+            <div class="milestone">
+                <h3>Automatic feedback loop <span class="status-pill next">Next</span></h3>
+                <p>Skips, full plays, and searches update scores by ±0.05 / ±0.1 in real time. Scores persist across
+                    sessions.</p>
+            </div>
+            <div class="milestone">
+                <h3>Vectorized performance <span class="status-pill next">Later</span></h3>
+                <p>NumPy-based key sampling for 1,000+ item catalogs. Heap-based top-K extraction for large queues.</p>
+            </div>
+            <div class="milestone">
+                <h3>Recommendations <span class="status-pill next">Later</span></h3>
+                <p>Use score history to surface songs you haven't heard in a while - discovery without randomness.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ CONTRIBUTE ============ -->
+<section id="contribute">
+    <div class="wrap">
+        <div class="kicker">Open Source</div>
+        <h2>Want to help build it?</h2>
+        <p class="section-lede">
+            Lucivyre is a personal project, but the door is open. Whether you write code,
+            design interfaces, write docs, or just want to suggest an idea - you're welcome here.
+        </p>
+
+        <div class="contribute-grid">
+            <div class="contrib-card">
+                <h3>Good first things to work on</h3>
+                <ul class="contrib-list">
+                    <li>
+                        <span class="contrib-tag code">code</span>
+                        Wire the A-ES shuffle into the player's shuffle mode
+                    </li>
+                    <li>
+                        <span class="contrib-tag code">code</span>
+                        Move the score store from CSV to SQLite (<code>scores.db</code>)
+                    </li>
+                    <li>
+                        <span class="contrib-tag code">code</span>
+                        Add NumPy vectorization for 1,000+ item catalogs
+                    </li>
+                    <li>
+                        <span class="contrib-tag ui">ui</span>
+                        Build a proper TUI or web front-end
+                    </li>
+                    <li>
+                        <span class="contrib-tag docs">docs</span>
+                        Write a README, contribute guide, or architecture diagram
+                    </li>
+                    <li>
+                        <span class="contrib-tag idea">idea</span>
+                        Suggest new tier boundaries, scoring rules, or feedback signals
+                    </li>
+                </ul>
+            </div>
+
+            <div class="contrib-card dark">
+                <h3>How to get started</h3>
+                <ol class="steps">
+                    <li>
+                        <span class="step-num">1</span>
+                        <div>
+                            <strong>Fork the repo</strong>
+                            <p>Copy it to your GitHub account.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="step-num">2</span>
+                        <div>
+                            <strong>Pick an issue</strong>
+                            <p>Look for <code>good-first-issue</code> or <code>help-wanted</code> labels.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="step-num">3</span>
+                        <div>
+                            <strong>Open a pull request</strong>
+                            <p>Small, focused changes get merged fastest.</p>
+                        </div>
+                    </li>
+                </ol>
+
+                <div class="contrib-cta">
+                    <a class="btn primary" href="https://github.com/Amika1118/lucivyre/fork" target="_blank"
+                       rel="noopener">
+                        Fork on GitHub
+                    </a>
+                    <a class="btn" href="https://github.com/Amika1118/lucivyre/issues" target="_blank" rel="noopener">
+                        Browse issues
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="invite-banner">
+            <div>
+                <div class="invite-title">Ready to jump in?</div>
+                <div class="invite-sub">Every contribution counts - even a typo fix in the README.</div>
+            </div>
+            <a class="btn primary" href="https://github.com/Amika1118/lucivyre" target="_blank" rel="noopener">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.18-1.49 3.14-1.18 3.14-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.25 5.68.41.35.78 1.05.78 2.12 0 1.53-.01 2.76-.01 3.14 0 .31.21.68.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/>
+                </svg>
+                View the repository
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+    <div class="wrap">
+        <div class="footer-author">
+            <div class="footer-signature">
+                Made with <span class="heart">♥</span> by
+                <a href="https://amika-alankara-portfolio.vercel.app/" target="_blank" rel="noopener"
+                   class="author-name">Amika Alankara</a>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/Amika1118" target="_blank" rel="noopener" title="GitHub">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.18-1.49 3.14-1.18 3.14-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.25 5.68.41.35.78 1.05.78 2.12 0 1.53-.01 2.76-.01 3.14 0 .31.21.68.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/>
+                    </svg>
+                    <span>GitHub</span>
+                </a>
+                <a href="https://www.linkedin.com/in/amika-ranmeth/" target="_blank" rel="noopener" title="LinkedIn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z"/>
+                    </svg>
+                    <span>LinkedIn</span>
+                </a>
+                <a href="https://amika-alankara-portfolio.vercel.app/" target="_blank" rel="noopener" title="Portfolio">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="2" y1="12" x2="22" y2="12"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                    <span>Portfolio</span>
+                </a>
+            </div>
+            <div class="footer-meta">
+                Lucivyre · Built with Python · pygame · mutagen
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script>
+    /* ================= PRELOADER ================= */
+    (function preloader() {
+        document.body.classList.add("loading");
+
+        const pre = document.getElementById("preloader");
+        const MIN_TIME = 2500;
+        const start = performance.now();
+
+        const fill = pre.querySelector(".preloader-fill");
+        if (fill) fill.style.animationDuration = `${MIN_TIME}ms, 1.4s`;
+
+        function hide() {
+            const elapsed = performance.now() - start;
+            const remaining = Math.max(0, MIN_TIME - elapsed);
+            setTimeout(() => {
+                pre.classList.add("hidden");
+                document.body.classList.remove("loading");
+                setTimeout(() => pre.remove(), 1600);   // matches 1.1s slide + buffer
+            }, remaining);
+        }
+
+        if (document.readyState === "complete") {
+            hide();
+        } else {
+            window.addEventListener("load", hide);
+        }
+    })();
+
+    /* ================= DEMO DATA ================= */
+    const SEED_SONGS = [
+        {title: "Stairway to Heaven", artist: "Led Zeppelin", score: 22.0},
+        {title: "Time", artist: "Pink Floyd", score: 18.5},
+        {title: "Bohemian Rhapsody", artist: "Queen", score: 16.2},
+        {title: "Get Lucky", artist: "Daft Punk", score: 14.1},
+        {title: "Instant Crush", artist: "Daft Punk", score: 12.3},
+        {title: "Dogs", artist: "Pink Floyd", score: 10.0},
+        {title: "Around the World", artist: "Daft Punk", score: 8.5},
+        {title: "Karma Police", artist: "Radiohead", score: 7.8},
+        {title: "Creep", artist: "Radiohead", score: 4.5},
+        {title: "Wonderwall", artist: "Oasis", score: 3.2},
+        {title: "Smells Like Teen Spirit", artist: "Nirvana", score: 1.5},
+        {title: "Digital Love", artist: "Daft Punk", score: 0.8},
+    ];
+
+    /* ================= ALGORITHM ================= */
+    function tierOf(score) {
+        if (score > 15.0) return "go";
+        if (score < 5.0) return "no";
+        return "mid";
+    }
+
+    function effectiveScore(score) {
+        if (score > 15.0) return score * 3.0;
+        if (score < 5.0) return Math.max(score, 0.05) * 0.1;
+        return score;
+    }
+
+    function runShuffle(songs) {
+        return songs.map(s => {
+            const u = 0.0001 + Math.random() * 0.9998;
+            const es = effectiveScore(s.score);
+            const k = Math.log(u) / es;
+            return {...s, effective: es, key: k, u};
+        }).sort((a, b) => b.key - a.key);
+    }
+
+    /* ================= DEMO ELEMENTS ================= */
+    const listEl = document.getElementById("demo-list");
+    const statusEl = document.getElementById("demo-status");
+    const rowRefs = {};
+
+    function createRows() {
+        listEl.innerHTML = "";
+        SEED_SONGS.forEach((s, i) => {
+            const row = document.createElement("div");
+            row.className = "song enter";
+            row.dataset.title = s.title;
+            row.style.animationDelay = (i * 30) + "ms";
+            row.addEventListener("animationend", () => {
+                row.classList.remove("enter");
+                row.style.animationDelay = "";
+            }, {once: true});
+
+            row.innerHTML = `
+      <div class="song-rank"></div>
+      <div>
+        <div class="song-title">${s.title}</div>
+        <div class="song-artist">${s.artist}</div>
+      </div>
+      <div class="song-tier"></div>
+      <div class="song-score"></div>
+      <div class="song-key"></div>
+    `;
+            rowRefs[s.title] = row;
+            listEl.appendChild(row);
+        });
+    }
+
+    function updateRow(s, rank, shuffled) {
+        const row = rowRefs[s.title];
+        const tier = tierOf(s.score);
+        const eff = shuffled ? s.effective.toFixed(2) : effectiveScore(s.score).toFixed(2);
+        const key = shuffled ? s.key.toFixed(3) : "-";
+
+        row.querySelector(".song-rank").textContent = String(rank).padStart(2, "0");
+        const tierEl = row.querySelector(".song-tier");
+        tierEl.className = "song-tier " + tier;
+        tierEl.textContent = tier.toUpperCase();
+        row.querySelector(".song-score").innerHTML =
+            `S <strong>${s.score.toFixed(1)}</strong> → S' ${eff}`;
+        row.querySelector(".song-key").textContent = "k = " + key;
+    }
+
+    function render(orderedSongs, shuffled) {
+        const firstRects = {};
+        orderedSongs.forEach(s => {
+            firstRects[s.title] = rowRefs[s.title].getBoundingClientRect();
+        });
+
+        orderedSongs.forEach((s, i) => {
+            updateRow(s, i + 1, shuffled);
+            listEl.appendChild(rowRefs[s.title]);
+        });
+
+        orderedSongs.forEach(s => {
+            const row = rowRefs[s.title];
+            const first = firstRects[s.title];
+            const last = row.getBoundingClientRect();
+            const dx = first.left - last.left;
+            const dy = first.top - last.top;
+
+            if (dx === 0 && dy === 0) return;
+
+            row.animate(
+                [
+                    {transform: `translate(${dx}px, ${dy}px)`},
+                    {transform: "translate(0, 0)"}
+                ],
+                {duration: 550, easing: "cubic-bezier(0.4, 0, 0.2, 1)"}
+            );
+        });
+
+        if (shuffled) {
+            const top = listEl.firstElementChild;
+            if (top) {
+                top.classList.add("highlight");
+                setTimeout(() => top.classList.remove("highlight"), 1200);
+            }
+        }
+    }
+
+    /* ================= WIRING ================= */
+    document.getElementById("shuffle-btn").addEventListener("click", () => {
+        const ordered = runShuffle(SEED_SONGS);
+        render(ordered, true);
+        statusEl.textContent = "Shuffled · " + new Date().toLocaleTimeString();
+    });
+
+    document.getElementById("reset-btn").addEventListener("click", () => {
+        const byScore = [...SEED_SONGS].sort((a, b) => b.score - a.score);
+        render(byScore, false);
+        statusEl.textContent = "Ready";
+    });
+
+    /* ================= SCROLL REVEAL ================= */
+    function initReveal() {
+        const targets = document.querySelectorAll(
+            "#features .kicker, #features h2, #features .section-lede, .features, .terminal, " +
+            "#algorithm .kicker, #algorithm h2, #algorithm .section-lede, " +
+            ".tiers, .scale, " +
+            "#demo .kicker, #demo h2, #demo .section-lede, .demo, " +
+            "#roadmap .kicker, #roadmap h2, #roadmap .section-lede, .roadmap, " +
+            "#contribute .kicker, #contribute h2, #contribute .section-lede, " +
+            ".contribute-grid, .invite-banner"
+        );
+
+        targets.forEach(el => el.classList.add("reveal"));
+
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add("visible");
+                    io.unobserve(entry.target);
+                }
+            });
+        }, {threshold: 0.12, rootMargin: "0px 0px -40px 0px"});
+
+        targets.forEach(el => io.observe(el));
+    }
+
+    /* ================= INIT ================= */
+    (function init() {
+        createRows();
+        const byScore = [...SEED_SONGS].sort((a, b) => b.score - a.score);
+        render(byScore, false);
+        initReveal();
+    })();
+</script>
+</body>
+</html>
