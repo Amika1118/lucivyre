@@ -21,12 +21,11 @@ def read_songs(file,dictionary):
 
         for row in reader:
             if row:
-                if len(row) == 4:
+                if len(row) == 3:
                     title = row[0]
-                    artist = row[1]
-                    length = row[2]
-                    credits = row[3]
-                    dictionary[title] = [artist] + [length] + [credits]
+                    length = row[1]
+                    credits = row[2]
+                    dictionary[title] = [length] + [credits]
                 elif len(row) == 9:
                     id = row[0]
                     title = row[1]

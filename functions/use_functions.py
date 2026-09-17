@@ -1,8 +1,8 @@
 import file_handeling.handle_csv
 import functions.search as sh
+import functions.shuffle as sf
 import ui_features.ui as ui
 import file_handeling.read_n_write as rw
-import functions.shuffle as sf
 
 full_data_csv = file_handeling.handle_csv.full_data_path
 
@@ -62,7 +62,7 @@ def search(song_ids):
             print("Please enter a valid Input.")
             ui.lines(45)
 
-def use_search(search_for, selected_songs):
+def use_search(search_for):
         rw.read_songs(full_data_csv,songs)
         search(song_list)
 
@@ -100,11 +100,17 @@ def use_search(search_for, selected_songs):
                 print("Please enter a number or q.")
                 continue
 
-            if choice == 0:
-                selected_songs = song_ids  # all
+            if choice in [0, 00]:
+                selected_songs = song_ids              # all
+                sf.add_credits(selected_songs)
                 break
             elif 1 <= choice <= len(song_ids):
                 selected_songs = [song_ids[choice - 1]]
+                sf.add_credits(selected_songs)
                 break
             else:
-                print(f"Please enter a number between 0 and {len(song_ids)}")
+                print(f"Please enter a number between 0 and {len(song_ids)}")#
+        return selected_songs
+
+
+use_search("artist")
