@@ -1,4 +1,4 @@
-import file_handeling.handle_csv
+import file_handeling.handle_data
 import file_handeling.read_n_write as rw
 
 # Shared dictionaries and lists used across the sort functions.
@@ -11,7 +11,7 @@ original = []   # sorted ascending
 reverse = []    # sorted descending
 
 # Path to the full song data CSV
-full_data_csv = file_handeling.handle_csv.full_data_path
+full_data_csv = file_handeling.handle_data.full_data_path
 
 
 def sort_by_title():

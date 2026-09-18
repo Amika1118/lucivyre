@@ -1,14 +1,14 @@
-import file_handeling.handle_csv
+import file_handeling.handle_data
 import file_handeling.read_n_write as rw
 import functions.sort as sr
 
-credits_file = file_handeling.handle_csv.credit_csv_path
-songs_file = file_handeling.handle_csv.songs_csv_path
+credits_file = file_handeling.handle_data.credit_csv_path
+songs_file = file_handeling.handle_data.songs_csv_path
 sorted_songs, reverse_sorted_songs = sr.sort_by_title()
 
 songs = {}
 song_credits = {}
-song_credit = {}
+
 
 def shuffle():
     print("Hello World")
@@ -17,6 +17,7 @@ def shuffle():
 def deduct_credits(song_id, played_time):
     """Reduce a song's credits based on how much of it was actually played."""
     # 1. Load data
+    song_credits.clear()
     rw.read_songs(credits_file, song_credits)
 
     # 2. Find the song
@@ -47,7 +48,7 @@ def deduct_credits(song_id, played_time):
 
 def add_credits(song_list):
     print("Adding Credits")
-    print(song_list)
+    song_credits.clear()
     rw.read_songs(credits_file, song_credits)
     new_credit = 0
 
@@ -64,10 +65,6 @@ def add_credits(song_list):
                     new_credit = credit + 0.05
 
                 credit = new_credit
-                song_credit[song_id] = [length, credit]
+                song_credits[song_id] = [length, credit]
 
-    for song, song_credit_data in song_credits.items():
-        for sing, sing_data in song_credit.items():
-            if song_credit_data[1] != sing_data[1]:
-                print(song,song_credit_data)
 

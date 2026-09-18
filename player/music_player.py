@@ -1,9 +1,9 @@
 import pygame
 
 import file_handeling.read_n_write as rw
-import file_handeling.handle_csv as hc
+import file_handeling.handle_data as hd
 
-full_csv = hc.full_data_path
+full_csv = hd.full_data_path
 music = {}
 
 def player(user_in):

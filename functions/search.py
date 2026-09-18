@@ -1,14 +1,14 @@
-import file_handeling.handle_csv
+import file_handeling.handle_data
 import sys
 import file_handeling.read_n_write as rw
 import functions.sort as s
 import ui_features.ui as ui
-from file_handeling.handle_csv import full_data_path
+from file_handeling.handle_data import full_data_path
 
 songs = {}
 artists = []
 
-full_data_csv = file_handeling.handle_csv.full_data_path
+full_data_csv = file_handeling.handle_data.full_data_path
 
 def search_by_first_letter(user_input,song_ids):
     """Search for songs by first letter."""
@@ -25,8 +25,7 @@ def search_by_title(user_input,song_ids):
     for song_id,data in songs.items():
         if user_input.lower() in data[0].lower():
             song_ids.append(song_id)
-
-    return song_ids
+    # return song_ids
 
 def search_by_artist(user_input,choice,song_ids):
     """Search for songs by artist."""
@@ -39,7 +38,8 @@ def search_by_artist(user_input,choice,song_ids):
     song = s.sort_by_artist()
     for artist,song_id in song.items():
         if user_in.lower() in artist.lower():
-            song_ids.append(song_id)
+            for id in song_id:
+                song_ids.append(id)
 
 def search_artist(user_input):
     """Search for artists by the first letter of their name."""

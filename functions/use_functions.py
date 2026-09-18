@@ -1,10 +1,10 @@
-import file_handeling.handle_csv
+import file_handeling.handle_data as hd
 import functions.search as sh
 import functions.shuffle as sf
 import ui_features.ui as ui
 import file_handeling.read_n_write as rw
 
-full_data_csv = file_handeling.handle_csv.full_data_path
+full_data_csv = hd.full_data_path
 
 song_list = []
 songs = {}
@@ -62,22 +62,23 @@ def search(song_ids):
             print("Please enter a valid Input.")
             ui.lines(45)
 
-def use_search(search_for):
+def use_search():
         rw.read_songs(full_data_csv,songs)
         search(song_list)
 
+        """"As this function is now done from search.py now we don't need this."""
         # Flatten song_list into a single list of song IDs
         # if the song_list is filled with id lists
-        song_ids = []
-        if search_for == "artist":
-            for group in song_list:
-                for key in group:
-                    if key not in song_ids:  # avoid duplicates
-                        song_ids.append(key)
-
-        # if not we can just use the list that is already been made.
-        else:
-            song_ids = song_list
+        # song_ids = []
+        # if search_for == "artist":
+        #     for group in song_list:
+        #         for key in group:
+        #             if key not in song_ids:  # avoid duplicates
+        #                 song_ids.append(key)
+        #
+        # # if not we can just use the list that is already been made.
+        # else:
+        song_ids = song_list
 
         # Print all the search results.
         for i, song_id in enumerate(song_ids, start=1):
@@ -109,8 +110,8 @@ def use_search(search_for):
                 sf.add_credits(selected_songs)
                 break
             else:
-                print(f"Please enter a number between 0 and {len(song_ids)}")#
+                print(f"Please enter a number between 0 and {len(song_ids)}")
         return selected_songs
 
 
-use_search("artist")
+use_search()

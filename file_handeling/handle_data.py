@@ -9,6 +9,7 @@ from datetime import datetime
 BASE_DIR = Path(__file__).resolve().parent.parent
 credit_csv_path = BASE_DIR / "data" /  "song_credits.csv"
 full_data_path = BASE_DIR / "data" / "full_data" / "full_data.csv"
+full_db_path = BASE_DIR / "data" / "full_data" / "full_db.db"
 songs_csv_path = BASE_DIR / "data"  / "songs.csv"
 artists_csv_path = BASE_DIR / "data" / "artists.csv"
 MARKER = BASE_DIR / "data" / ".initialized.json"
@@ -101,4 +102,3 @@ def update_csvs():
         # this is made so to be able to update the csv while running unlike the full one.
         header = ["Id","Times_played"]
         rw.write_songs(header, songs_csv_path, new_dict_songs)
-

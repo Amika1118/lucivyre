@@ -1,12 +1,12 @@
 import os
 
-import file_handeling.handle_csv
+import file_handeling.handle_data
 import store_songs.store_music as sm
-import file_handeling.handle_csv as hc
+import file_handeling.handle_data as hd
 import functions.search as sf
 import file_handeling.read_n_write as rw
 
-full_data_csv = file_handeling.handle_csv.full_data_path
+full_data_csv = file_handeling.handle_data.full_data_path
 
 song_list = []
 songs = {}
@@ -17,7 +17,7 @@ def main():
 
     # initialization is done only once as it is responsible to make
     # credits 10 for each song, and they will be changed according to user preferences.
-    hc.initialize()    # comment this after the first run as it won't run again after the first run.
+    hd.initialize()    # comment this after the first run as it won't run again after the first run.
 
     # hc.update_csvs()
 
