@@ -7,10 +7,10 @@ DB_PATH = hd.full_db_path
 full_data = hd.full_data_path
 songs = {}
 new_list = []
-
+sorted_list = []
+reverse_sorted_list = []
 
 def initialize_db():
-
     # # This ensures the folder exists (good practice even if you know it does)
     # DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -46,3 +46,34 @@ def store_data_in_db():
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,new_list
         )
+
+def read_data_from_db(new_dict):
+    with sqlite3.connect(DB_PATH) as conn:
+        for row in conn.execute("SELECT * FROM songs"):
+            new_dict[row[0]] = row[1:]
+
+def sort_by_song_title(sort_type):
+    with sqlite3.connect(DB_PATH) as conn:
+        if sort_type.upper() == "ASC":
+            for row in conn.execute("SELECT id FROM songs ORDER BY song_name ASC"):
+                sorted_list.append(row)
+        else:
+            for row in conn.execute("SELECT * FROM songs ORDER BY song_credits DESC"):
+                reverse_sorted_list.append(row)
+
+    return sorted_list, reverse_sorted_list
+
+def sort_by_artist():
+    with sqlite3.connect(DB_PATH) as conn:
+        for row in conn.execute("SELECT id,artist FROM songs ORDER BY artist ASC"):
+            if row not in sorted_list:
+                songs.setdefault(row[1], []).append(row[0])
+
+        # for row in conn.execute("SELECT id,artist FROM songs ORDER BY artist DESC"):
+        #     if row not in reverse_sorted_list:
+        #         reverse_sorted_list.append(row)
+
+def sort_by_added_time(new_dict):
+    with sqlite3.connect(DB_PATH) as conn:
+        for row in conn.execute("SELECT * FROM songs ORDER BY date_added ASC"):
+            new_dict[row[0]] = row[1:]

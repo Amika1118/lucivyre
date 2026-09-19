@@ -3,6 +3,7 @@ import functions.search as sh
 import functions.shuffle as sf
 import ui_features.ui as ui
 import file_handeling.read_n_write as rw
+import file_handeling.db as db
 
 full_data_csv = hd.full_data_path
 
@@ -113,5 +114,35 @@ def use_search():
                 print(f"Please enter a number between 0 and {len(song_ids)}")
         return selected_songs
 
+def use_sort():
+    user_choice = ""
+    while True:
+        print("Sort Songs ....")
+        print("01. By Song Title \n02. By Artist \n03. By Added Date \n04. Exit Sort")
+        user_choice = input("Enter your choice: ")
+        if user_choice.lower() in ["1", "01", "song", "by song","2","02","by artist","artist","3", "03","by added date" , "added date", "exit sort", "4", "04"]:
+            break
 
-use_search()
+        else:
+            continue
+
+    if user_choice.lower() in ["1", "01", "title", "by song title"]:
+        while True:
+            print("Sort Songs by song Title ....")
+            print("01. Sort ASC \n02. Sort DESC \n03. Exit Sort")
+            choice = input("Enter your choice: ")
+            if choice.lower() in ["1", "01", "asc", "by asc"]:
+                db.sort_by_song_title("ASC")
+                break
+            elif choice.lower() in ["2", "02", "desc", "by desc"]:
+                db.sort_by_song_title("DESC")
+            elif choice.lower() in ["3", "03", "exit", "exit sort"]:
+                break
+            else:
+                print("Please enter a valid number.")
+    elif user_choice.lower() in ["2", "02", "by artist"]:
+        db.sort_by_artist()
+    elif user_choice.lower() in ["3", "03", "by added date","added date"]:
+        db.sort_by_added_time()
+
+

@@ -4,6 +4,7 @@ import file_handeling.read_n_write as rw
 import functions.sort as s
 import ui_features.ui as ui
 from file_handeling.handle_data import full_data_path
+import file_handeling.db as db
 
 songs = {}
 artists = []
@@ -13,7 +14,10 @@ full_data_csv = file_handeling.handle_data.full_data_path
 def search_by_first_letter(user_input,song_ids):
     """Search for songs by first letter."""
     songs.clear()
-    rw.read_songs(full_data_csv, songs)
+
+    # rw.read_songs(full_data_csv, songs)           # this was the previous way which read a csv and then populated a dictionary
+    db.read_data_from_db(songs)                     # now we directly read form sqlite database and populate the same dictionary
+
     for song_id,data in songs.items():
         if user_input.capitalize() == data[0][0].capitalize():
             song_ids.append(song_id)
@@ -21,7 +25,10 @@ def search_by_first_letter(user_input,song_ids):
 def search_by_title(user_input,song_ids):
     """Search for songs by title."""
     songs.clear()
-    rw.read_songs(full_data_csv, songs)
+
+    # rw.read_songs(full_data_csv, songs)
+    db.read_data_from_db(songs)
+
     for song_id,data in songs.items():
         if user_input.lower() in data[0].lower():
             song_ids.append(song_id)
@@ -44,7 +51,10 @@ def search_by_artist(user_input,choice,song_ids):
 def search_artist(user_input):
     """Search for artists by the first letter of their name."""
     songs.clear()
-    rw.read_songs(full_data_csv, songs)
+
+    # rw.read_songs(full_data_csv, songs)
+    db.read_data_from_db(songs)
+
     for song_id,data in songs.items():
         if user_input.capitalize() in data[1][0].capitalize():
             if data[1] not in artists:
