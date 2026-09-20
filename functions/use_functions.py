@@ -63,9 +63,15 @@ def search(song_ids):
             print("Please enter a valid Input.")
             ui.lines(45)
 
-def use_search():
-        rw.read_songs(full_data_csv,songs)
-        search(song_list)
+def use(what_for, selected):
+        # rw.read_songs(full_data_csv,songs)            # this was the previous way which read a csv and then populated a dictionary
+        db.read_data_from_db(songs)                     # now we directly read form sqlite database and populate the same dictionary
+
+        # from here we change what we use we can call this from main.py
+        if what_for.lower() in ["search"]:
+            search(song_list)
+        elif what_for.lower() in ["sort"]:
+            sort(song_list)
 
         """"As this function is now done from search.py now we don't need this."""
         # Flatten song_list into a single list of song IDs
@@ -82,12 +88,72 @@ def use_search():
         song_ids = song_list
 
         # Print all the search results.
-        for i, song_id in enumerate(song_ids, start=1):
-            data = songs.get(song_id)
-            if data is None:
-                continue
-            print(f"{i:02d}. {data[1]} - {data[0]}")  # artist - title
-        print(" 00. Select all")
+        if what_for.lower() in ["search"]:
+            for i, song_id in enumerate(song_ids, start=1):
+                data = songs.get(song_id)
+                if data is None:
+                    continue
+                print(f"{i:02d}. {data[1]} - {data[0]}")  # artist - title
+        else:
+            page_size = 20
+            current_page = 1
+            total_songs = len(song_ids)
+
+            # Calculate total pages (using ceiling division)
+            # max(1, ...) prevents a "Page 1 of 0" error if there are no songs
+            total_pages = max(1, (total_songs + page_size - 1) // page_size)
+
+            while True:
+                # 1. Calculate the slice indices for the current page
+                start_index = (current_page - 1) * page_size
+                end_index = start_index + page_size
+
+                # 2. Slice the song_ids list to get only the 20 songs for this page
+                page_song_ids = song_ids[start_index:end_index]
+
+                print(f"\n--- Page {current_page} of {total_pages} ---")
+
+                # 3. Print the songs. Notice 'start=start_index + 1' so numbering stays continuous
+                for i, song_id in enumerate(page_song_ids, start=start_index + 1):
+                    data = songs.get(song_id)
+                    if data is None:
+                        continue
+                    print(f"{i:02d}. {data[1]} - {data[0]}")
+
+                print(" 00. Select all")
+
+                # 4. Navigation Menu
+                print("\n[N] Next 20 | [P] Previous 20 | [Q] Quit / Type a number to select")
+                choice = input("Choose an option: ").strip().lower()
+
+                if choice == 'n':
+                    if current_page < total_pages:
+                        current_page += 1
+                    else:
+                        print(">> You are on the last page.")
+                elif choice == 'p':
+                    if current_page > 1:
+                        current_page -= 1
+                    else:
+                        print(">> You are on the first page.")
+                elif choice == 'q':
+                    break  # Exit pagination loop and go to the final selection loop
+                elif choice == '0' or choice == '00':
+                    # Select all immediately
+                    selected = song_ids
+                    sf.add_credits(selected)
+                    break
+                elif choice.isdigit():
+                    # User typed a specific number while browsing
+                    num = int(choice)
+                    if 1 <= num <= total_songs:
+                        selected = [song_ids[num - 1]]
+                        sf.add_credits(selected)
+                        break
+                    else:
+                        print(f"Invalid number. Please choose between 1 and {total_songs}.")
+                else:
+                    print("Invalid input. Please try again.")
 
         # Ask whether to play all or play one.
         while True:
@@ -103,26 +169,23 @@ def use_search():
                 continue
 
             if choice in [0, 00]:
-                selected_songs = song_ids              # all
-                sf.add_credits(selected_songs)
+                selected = song_ids              # all
+                sf.add_credits(selected)
                 break
             elif 1 <= choice <= len(song_ids):
-                selected_songs = [song_ids[choice - 1]]
-                sf.add_credits(selected_songs)
+                selected = [song_ids[choice - 1]]
+                sf.add_credits(selected)
                 break
             else:
                 print(f"Please enter a number between 0 and {len(song_ids)}")
-        return selected_songs
 
-def use_sort():
-    user_choice = ""
+def sort(Song_ids):
     while True:
         print("Sort Songs ....")
         print("01. By Song Title \n02. By Artist \n03. By Added Date \n04. Exit Sort")
         user_choice = input("Enter your choice: ")
         if user_choice.lower() in ["1", "01", "song", "by song","2","02","by artist","artist","3", "03","by added date" , "added date", "exit sort", "4", "04"]:
             break
-
         else:
             continue
 
@@ -132,17 +195,32 @@ def use_sort():
             print("01. Sort ASC \n02. Sort DESC \n03. Exit Sort")
             choice = input("Enter your choice: ")
             if choice.lower() in ["1", "01", "asc", "by asc"]:
-                db.sort_by_song_title("ASC")
+                db.sort_by_song_title("ASC",Song_ids)
                 break
             elif choice.lower() in ["2", "02", "desc", "by desc"]:
-                db.sort_by_song_title("DESC")
+                db.sort_by_song_title("DESC",Song_ids)
+                break
             elif choice.lower() in ["3", "03", "exit", "exit sort"]:
                 break
             else:
                 print("Please enter a valid number.")
+
     elif user_choice.lower() in ["2", "02", "by artist"]:
-        db.sort_by_artist()
+        songs.clear()
+        db.sort_by_artist(songs)
+
     elif user_choice.lower() in ["3", "03", "by added date","added date"]:
-        db.sort_by_added_time()
-
-
+        while True:
+            print("Sort Songs by song Title ....")
+            print("01. Sort ASC \n02. Sort DESC \n03. Exit Sort")
+            choice = input("Enter your choice: ")
+            if choice.lower() in ["1", "01", "asc", "by asc"]:
+                db.sort_by_added_time("ASC",Song_ids)
+                break
+            elif choice.lower() in ["2", "02", "desc", "by desc"]:
+                db.sort_by_added_time("DESC",Song_ids)
+                break
+            elif choice.lower() in ["3", "03", "exit", "exit sort"]:
+                break
+            else:
+                print("Please enter a valid number.")

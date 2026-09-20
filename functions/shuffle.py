@@ -47,7 +47,7 @@ def deduct_credits(song_id, played_time):
 
 
 def add_credits(song_list):
-    print("Adding Credits")
+    """Increase a song's credits based on search for a song or songs."""
     song_credits.clear()
     rw.read_songs(credits_file, song_credits)
     new_credit = 0
