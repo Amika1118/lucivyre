@@ -1,6 +1,5 @@
 import sqlite3
 import file_handeling.read_n_write as rw
-
 import file_handeling.handle_data as hd
 
 DB_PATH = hd.full_db_path
@@ -78,4 +77,14 @@ def sort_by_added_time(sort_type,sorted_list):
 
         else:
             for row in conn.execute("SELECT id FROM songs ORDER BY date_added DESC"):
+                sorted_list.append(row[0])
+
+def sort_by_times_played(sort_type,sorted_list):
+    with sqlite3.connect(DB_PATH) as conn:
+        if sort_type.upper() == "LEAST":
+            for row in conn.execute("SELECT id,times_played FROM songs ORDER BY times_played ASC"):
+                sorted_list.append(row[0])
+
+        else:
+            for row in conn.execute("SELECT id FROM songs ORDER BY times_played DESC"):
                 sorted_list.append(row[0])
