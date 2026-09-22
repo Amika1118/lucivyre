@@ -6,7 +6,7 @@ import file_handeling.handle_data as hd
 import functions.use_functions as uf
 import file_handeling.read_n_write as rw
 import file_handeling.db as db
-import player.music_player as mp
+import player.player as mp
 
 full_data_csv = file_handeling.handle_data.full_data_path
 
@@ -23,7 +23,7 @@ def main():
 
     # hc.update_csvs()
 
-    # rw.read_songs(full_data_csv,songs)            # This is not needed in here anymore as we call it in music_player.py
+    # rw.read_songs(full_data_csv,songs)            # This is not needed in here anymore as we call it in player.py
 
     user_in = ""
     while True:
