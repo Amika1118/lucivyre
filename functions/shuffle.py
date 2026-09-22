@@ -75,7 +75,7 @@ def deduct_credits(song_id, played_time):
     song_credits.clear()
     
     # rw.read_songs(full_data_csv, songs)           # this was the previous way which read a csv and then populated a dictionary
-    db.read_data_from_db(song_credits)                     # now we directly read form sqlite database and populate the same dictionary
+    db.read_data_from_db(song_credits)              # now we directly read form sqlite database and populate the same dictionary
 
     # Song isn't in the table? Nothing to do.
     if song_id not in song_credits:
@@ -148,9 +148,9 @@ def add_credits(song_list):
         song_credits[song_id] = [float(length),
                                  round(float(credit) + bonus, 3)]
 
+        # update the database
+        db.update_db(song_id.lower(), round(float(credit) + bonus, 3))
+
     # Save the file
     rw.write_songs(credits_file, song_credits,
                    ["song_id", "length", "song_credits"])
-
-    # update the database
-    db.update_db(song_id.lower(), round(float(credit) + bonus, 3))

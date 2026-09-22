@@ -63,7 +63,7 @@ def search(song_ids):
             print("Please enter a valid Input.")
             ui.lines(45)
 
-def use(what_for, selected):
+def use(what_for):
         # rw.read_songs(full_data_csv,songs)            # this was the previous way which read a csv and then populated a dictionary
         db.read_data_from_db(songs)                     # now we directly read form sqlite database and populate the same dictionary
 
@@ -182,6 +182,7 @@ def use(what_for, selected):
         else:
             print("Sorry!\nYour selection has 0 results.")
             print("Please try again.")
+        return selected
 
 def sort(Song_ids):
     while True:
