@@ -51,6 +51,15 @@ def read_data_from_db(new_dict):
         for row in conn.execute("SELECT * FROM songs"):
             new_dict[row[0]] = row[1:]
 
+def update_db(song_id,new_credit):
+
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("UPDATE songs SET song_credits = ? WHERE id = ?",
+                     (new_credit,song_id)
+                     )
+
+
+"""Sorting Algorithms"""
 def sort_by_song_title(sort_type,sorted_list):
     with sqlite3.connect(DB_PATH) as conn:
         if sort_type.upper() == "ASC":

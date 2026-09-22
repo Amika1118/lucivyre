@@ -21,7 +21,7 @@ INITIAL_CREDITS = 10
 def effective_score(credits):
     # Turns raw credits into a "weight" for the shuffle.
     # Bigger weight = plays sooner.
-    #
+
     # Three tiers:
     #   above 15   → favorite, boost it 3x
     #   below 5    → fading out, cut it to a tenth
@@ -34,21 +34,22 @@ def effective_score(credits):
     return credits
 
 
-def shuffle(songs, shuffled_list):
+def shuffle(shuffled_list):
     # Shuffle the songs, but "cheat" toward higher-credit ones.
     # A low-credit song can still sneak in - it's random, just weighted.
-    #
+
     # Trick: give each song a random key = log(u) / weight.
     # Sort by that key, biggest first. Higher weight → bigger key → plays sooner.
-    #
-    # Whatever order comes out, dump the IDs into shuffled_list.
+    songs.clear()
+    db.read_data_from_db(songs)
 
+    # Whatever order comes out, dump the IDs into shuffled_list.
     keys = []
     for song_id, data in songs.items():
-        credits = float(data[3])                    # credits are at position 3
-        s_prime = effective_score(credits)          # apply the tier boost/cut
+        credits = float(data[3])                          # credits are at position 3
+        s_prime = effective_score(credits)                # apply the tier boost/cut
         u = random.uniform(0.0001, 0.9999)          # random 0..1, avoid the edges
-        k = math.log(u) / s_prime                   # always negative, bigger = better
+        k = math.log(u) / s_prime                         # always negative, bigger = better
         keys.append((k, song_id))
 
     # Highest key first
@@ -61,11 +62,11 @@ def shuffle(songs, shuffled_list):
 
 def deduct_credits(song_id, played_time):
     # Take credits away from a song depending on how much of it you actually heard.
-    #
+
     # Played it all the way → keep all credits.
     # Skipped halfway       → keep half.
     # Skipped instantly     → keep basically nothing.
-    #
+
     # Watch out: played_time and length must be in the SAME unit (both seconds,
     # or both milliseconds). Mixing them up = the fraction gets clamped and
     # nothing gets deducted.
@@ -74,7 +75,7 @@ def deduct_credits(song_id, played_time):
     song_credits.clear()
     
     # rw.read_songs(full_data_csv, songs)           # this was the previous way which read a csv and then populated a dictionary
-    db.read_data_from_db(songs)                     # now we directly read form sqlite database and populate the same dictionary
+    db.read_data_from_db(song_credits)                     # now we directly read form sqlite database and populate the same dictionary
 
     # Song isn't in the table? Nothing to do.
     if song_id not in song_credits:
@@ -82,9 +83,17 @@ def deduct_credits(song_id, played_time):
         return
 
     # Unpack the row: [artist, length, credit]
-    artist, length, credit = song_credits[song_id]
-    length = float(length)
-    credit = float(credit)
+    # artist, length, credit = song_credits[song_id]
+    # length = float(length)
+    # credit = float(credit)
+
+    length = 0.0
+    credit = 0.0
+
+    for song_id, data in song_credits[song_id].items():
+        length = float(data[2])
+        credit = float(data[3])
+
 
     # Figure out the new credit value
     if length > 0:
@@ -95,33 +104,40 @@ def deduct_credits(song_id, played_time):
         # Song has no length? Don't touch the credits.
         new_credit = credit
 
-    # Put it back in the same shape we read it
-    song_credits[song_id] = [artist, length, new_credit]
+
+    # update the database.
+    db.update_db(song_id.lower(), new_credit)
+
+
+    # this for the csv file
+    song_credits.clear()
+    song_credits[song_id] = [length, new_credit]
 
     # Save the file
     rw.write_songs(credits_file, song_credits,
-                   ["artist", "length", "song_credits"])
+                   ["song_id", "length", "song_credits"])
 
 
 def add_credits(song_list):
     # Give a little bonus to songs you searched for.
     # If you picked one specific song → +0.10
     # If you picked a bunch at once    → +0.05 each
-    #
+
     # Idea: searching for a song shows you wanted it, so it deserves a nudge.
 
     # Load the current credit table
+    global credit, song_id
     song_credits.clear()
 
-    # rw.read_songs(full_data_csv, songs)           # this was the previous way which read a csv and then populated a dictionary
-    db.read_data_from_db(songs)                     # now we directly read form sqlite database and populate the same dictionary
+    # rw.read_songs(full_data_csv, songs)                  # this was the previous way which read a csv and then populated a dictionary
+    db.read_data_from_db(song_credits)                     # now we directly read form sqlite database and populate the same dictionary
 
     # Bigger bonus for a single careful pick than for a batch
     bonus = 0.1 if len(song_list) == 1 else 0.05
 
     for song_id in song_list:
         # Skip anything that isn't in the credits table
-        if song_id not in song_credits:
+        if song_id not in song_credits.keys():
             continue
 
         # Unpack the row: [artist, length, credit]
@@ -129,9 +145,12 @@ def add_credits(song_list):
 
         # Add the bonus. round(...) keeps values tidy - otherwise you get
         # numbers like 7.850000000000001 after a few additions.
-        song_credits[song_id] = [artist, float(length),
+        song_credits[song_id] = [float(length),
                                  round(float(credit) + bonus, 3)]
 
     # Save the file
     rw.write_songs(credits_file, song_credits,
-                   ["artist", "length", "song_credits"])
+                   ["song_id", "length", "song_credits"])
+
+    # update the database
+    db.update_db(song_id.lower(), round(float(credit) + bonus, 3))
