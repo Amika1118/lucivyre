@@ -1,4 +1,8 @@
 import os
+import random
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import file_handeling.handle_data
 import store_songs.store_music as sm
@@ -6,7 +10,7 @@ import file_handeling.handle_data as hd
 import functions.use_functions as uf
 import file_handeling.read_n_write as rw
 import file_handeling.db as db
-import player.player as mp
+import music_player.player as p
 
 full_data_csv = file_handeling.handle_data.full_data_path
 
@@ -23,7 +27,7 @@ def main():
 
     # hc.update_csvs()
 
-    # rw.read_songs(full_data_csv,songs)            # This is not needed in here anymore as we call it in player.py
+    # rw.read_songs(full_data_csv,songs)            # This is not needed in here anymore as we call it in music_player.py
 
     user_in = ""
     while True:
@@ -33,11 +37,18 @@ def main():
         else:
             print("Please enter a valid input.")
 
+    songs.clear()
+    song_list.clear()
+    db.read_data_from_db(songs)
+    for song, song_data in songs.items():
+        song_list.append(song)
+
     match user_in:
         case "1"|"01":
-            mp.player("play")
+            p.run("play",song_list)
         case "2"|"02":
-            mp.player("play at random")
+            random.shuffle(song_list)
+            p.run("play at random",song_list)
         case "3"|"03":
             uf.use("search")
         case "4"|"04":
@@ -45,10 +56,10 @@ def main():
         case "5"|"05":
             print("Goodbye !\nThank you for playing.")
 
-    finale()
+    # finale()
 
 def finale():
-    """We write the csv when the user exits the player to store the data in csv."""
+    """We write the csv when the user exits the music_player to store the data in csv."""
     db.read_data_from_db(songs)
     header = ["Song_id","Song","Artist","Length","song_credits","Audio_type","File_path","Times_played","Date_added"]
     rw.write_songs(header,songs,full_data_csv)

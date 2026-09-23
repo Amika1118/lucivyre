@@ -13,7 +13,7 @@ def ensure_runtime():
 
 
 # ----------------------------------------------------------------------
-#  STATUS (player writes, controller reads)
+#  STATUS (music_player writes, controller reads)
 # ----------------------------------------------------------------------
 def write_status(data):
     tmp = STATUS_FILE + ".tmp"
@@ -48,7 +48,7 @@ def read_status():
 
 
 # ----------------------------------------------------------------------
-#  COMMANDS (controller writes, player reads)
+#  COMMANDS (controller writes, music_player reads)
 # ----------------------------------------------------------------------
 def write_command(cmd):
     tmp = CMD_FILE + ".tmp"

@@ -3,19 +3,20 @@ import sys
 import time
 import sqlite3
 import pygame
-import shared
+import random
 
-import sys
-import os
+from music_player import shared as shared
 
 # add project root (one level up from this file) to the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from file_handeling import handle_data as hd
+from file_handeling import db as db
 
 DB_PATH        = hd.full_db_path
-DEFAULT_VOLUME = 0.7
+DEFAULT_VOLUME = 0.5
 TICK_MS        = 50
+songs = {}
 
 # ----------------------------------------------------------------------
 #  STATE
@@ -44,15 +45,15 @@ state = {
 # ----------------------------------------------------------------------
 #  DATABASE
 # ----------------------------------------------------------------------
-def load_songs():
-    songs = {}
-    with sqlite3.connect(DB_PATH) as conn:
-        for row in conn.execute(
-            "SELECT id, song_name, artist, song_length, song_credits, "
-            "audio_types, file_path, times_played, date_added FROM songs"
-        ):
-            songs[row[0]] = list(row[1:])
-    return songs
+# def load_songs():
+#     songs = {}
+#     with sqlite3.connect(DB_PATH) as conn:
+#         for row in conn.execute(
+#             "SELECT id, song_name, artist, song_length, song_credits, "
+#             "audio_types, file_path, times_played, date_added FROM songs"
+#         ):
+#             songs[row[0]] = list(row[1:])
+#     return songs
 
 
 def get_credits(sid):
@@ -111,7 +112,7 @@ def play_song(index):
     if index < 0 or index >= len(state["playlist"]):
         return False
 
-    songs = load_songs()
+    db.read_data_from_db(songs)
     song_id = state["playlist"][index]
     data = songs.get(song_id)
     if not data:
@@ -174,13 +175,13 @@ def deduct(sid, played):
 #  VOLUME
 # ----------------------------------------------------------------------
 def vol_up():
-    state["volume"] = min(1.0, round(state["volume"] + 0.1, 2))
+    state["volume"] = min(1.0, round(state["volume"] + 0.05, 2))
     if not state["muted"]:
         pygame.mixer.music.set_volume(state["volume"])
 
 
 def vol_down():
-    state["volume"] = max(0.0, round(state["volume"] - 0.1, 2))
+    state["volume"] = max(0.0, round(state["volume"] - 0.05, 2))
     if not state["muted"]:
         pygame.mixer.music.set_volume(state["volume"])
 
@@ -245,7 +246,7 @@ def handle_command(cmd):
 # ----------------------------------------------------------------------
 #  MAIN
 # ----------------------------------------------------------------------
-def run(playlist):
+def run(what_for,playlist):
     shared.ensure_runtime()
 
     state["playlist"] = list(playlist)
@@ -287,11 +288,11 @@ def run(playlist):
     print("Player stopped.")
 
 
-from file_handeling import db as db
-dict= {}
-new_list = []
-db.read_data_from_db(dict)
-for key, value in dict.items():
-    new_list.append(key)
-
-run(new_list)
+# dict= {}
+# new_list = []
+# db.read_data_from_db(dict)
+# for key, value in dict.items():
+#     new_list.append(key)
+#
+# random.shuffle(new_list)
+# run(new_list)

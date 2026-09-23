@@ -217,7 +217,7 @@ def sort(Song_ids):
 
     elif user_choice.lower() in ["2", "02", "by times played", "times played"]:
         while True:
-            print("\nSort Songs by times played ....\n( This will be same as sorted by song if you have not used this player before.\nSo we recommend playing a few songs before using this sorting method )")
+            print("\nSort Songs by times played ....\n( This will be same as sorted by song if you have not used this music_player before.\nSo we recommend playing a few songs before using this sorting method )")
             print("\n01. Most played \n02. Least played \n03. Exit Sorting by times played")
             choice = input("Enter your choice: ")
             if choice.lower() in ["1", "01", "most", "most played"]:

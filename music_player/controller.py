@@ -1,8 +1,11 @@
 import sys
+import os
 import time
 import threading
 import msvcrt
-import shared
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from music_player import shared as shared
 
 
 # ----------------------------------------------------------------------
@@ -10,7 +13,7 @@ import shared
 # ----------------------------------------------------------------------
 def draw(status):
     if not status:
-        line = "Waiting for player..."
+        line = "Waiting for music_player..."
         sys.stdout.write("\r" + line.ljust(80))
         sys.stdout.flush()
         return
@@ -55,7 +58,7 @@ def main():
     shared.ensure_runtime()
 
     print("Controller ready.")
-    print("Controls: [p]ause [n]ext [b]ack [+/-]vol [m]ute [q]uit player")
+    print("Controls: [p]ause [n]ext [b]ack [+/-]vol [m]ute [q]uit music_player")
     print()
 
     threading.Thread(target=display_loop, daemon=True).start()
